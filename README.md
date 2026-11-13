@@ -1,19 +1,64 @@
-# EXM1
+# دفترچه اشتباهات
 
-A new Flutter project created with FlutLab - https://flutlab.io
+یک اپلیکیشن دفترچه یادداشت فارسی و راست‌چین که با Flutter ساخته شده است.
 
-## Getting Started
+## امکانات
 
-A few resources to get you started if this is your first Flutter project:
+- ساخت، ویرایش و حذف یادداشت‌ها
+- ذخیره‌سازی محلی یادداشت‌ها روی دستگاه
+- جستجو در عنوان و متن یادداشت‌ها
+- ساخت پوشه و مرتب‌سازی یادداشت‌ها
+- انتقال یادداشت بین پوشه‌ها
+- ویرایشگر متن غنی (Rich Text) با بولد، ایتالیک، زیرخط، خط‌خورده، رنگ متن و پس‌زمینه، اندازه و نوع قلم، تیترها، فهرست‌ها و چینش پاراگراف
+- درج تصاویر در میان متن یادداشت و حفظ آن‌ها در فایل Word
+- نقاشی و حاشیه‌نویسی روی تصاویر
+- ورود گروهی فایل‌های DOCX و تبدیل هر فایل به یادداشت
+- خروجی DOCX برای هر یادداشت یا خروجی گروهی همه یادداشت‌ها، همراه با تصاویر و قالب‌بندی متن پشتیبانی‌شده
+- ورود DOCX با استخراج تصاویر و قالب‌بندی‌هایی مانند بولد، ایتالیک، زیرخط، رنگ، اندازه قلم، تیتر و چینش پاراگراف
+- ساخت و بازیابی فایل پشتیبان JSON شامل یادداشت‌ها، پوشه‌ها، تم‌ها و تصاویر پیوست‌شده
+- انتخاب تم برای هر یادداشت
+- شخصی‌سازی رنگ پس‌زمینه، رنگ متن و فونت
+- رابط کاربری فارسی با پشتیبانی از چیدمان راست‌به‌چپ
 
-- https://flutter.dev/docs/get-started/codelab
-- https://flutter.dev/docs/cookbook
+نکته: انتقال تصاویر و قالب‌بندی‌های متنی رایج پشتیبانی می‌شود؛ ساختارهای پیچیده Word مانند جدول‌های چندسطحی، سربرگ/پاورقی و بعضی استایل‌های اختصاصی ممکن است دقیقاً مشابه فایل اصلی منتقل نشوند.
 
-For help getting started with Flutter, view our
-https://flutter.dev/docs, which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## فناوری‌ها
 
-## Getting Started: FlutLab - Flutter Online IDE
+- Flutter و Dart
+- shared_preferences برای ذخیره‌سازی اطلاعات
+- image_picker برای انتخاب تصاویر
+- path_provider برای نگهداری فایل‌های تصویری
+- archive و xml برای ساخت و خواندن فایل‌های DOCX
+- flutter_quill و flutter_quill_extensions برای ویرایش متن غنی و تصاویر درون‌متنی
+- file_picker برای انتخاب و ذخیره فایل‌ها
 
-- How to use FlutLab? Please, view our https://flutlab.io/docs
-- Join the discussion and conversation on https://flutlab.io/residents
+## اجرا
+
+ابتدا Flutter را نصب کنید، سپس در پوشه پروژه اجرا کنید:
+
+```bash
+flutter pub get
+flutter run
+```
+
+## ساخت نسخه خروجی اندروید
+
+```bash
+flutter build apk --release
+```
+
+## ساختار ذخیره‌سازی
+
+یادداشت‌ها، پوشه‌ها و تم‌ها به‌صورت محلی روی دستگاه ذخیره می‌شوند. تصاویر پیوست‌شده نیز در پوشه اختصاصی برنامه نگهداری می‌شوند.
+
+---
+ساخته‌شده با Flutter ❤️
+
+
+## Architecture
+
+- `lib/models/`: notebook domain models.
+- `lib/data/`: persistence repository; existing SharedPreferences keys are retained for compatibility.
+- `lib/screens/`: dedicated UI modules for theme dialogs and drawing.
+
+Android release builds are validated through GitHub Actions on pushes to `main` and pull requests targeting `main`.
