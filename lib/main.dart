@@ -3,14 +3,12 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'dart:ui' as ui;
-import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:xml/xml.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:dart_quill_delta/dart_quill_delta.dart' as delta;
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
@@ -18,11 +16,9 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'models/note.dart';
 import 'data/notebook_repository.dart';
 import 'screens/theme_dialogs.dart';
-import 'screens/drawing_page.dart';
 
 const String _quillNoteMarker = '__quill_note_v1__';
 const String _legacyRichNoteMarker = '__rich_note_v1__';
@@ -75,8 +71,9 @@ class NotebookApp extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
     debugShowCheckedModeBanner: false, title: 'دفترچه اشتباهات ترید',
     theme: ThemeData(useMaterial3: true, colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6956A5)), scaffoldBackgroundColor: const Color(0xFFF7F5FB)),
-    localizationsDelegates: const [GlobalMaterialLocalizations.delegate, GlobalCupertinoLocalizations.delegate, GlobalWidgetsLocalizations.delegate, quill.FlutterQuillLocalizations.delegate],
+    localizationsDelegates: [...GlobalMaterialLocalizations.delegates, quill.FlutterQuillLocalizations.delegate],
     supportedLocales: const [Locale('fa'), Locale('en')],
+    builder: (context, child) => MaterialUiCompatibilityBridge(child: child!),
     home: const NotesPage(),
   );
 }
@@ -195,12 +192,12 @@ class _NotesPageState extends State<NotesPage> {
     final bytes = await File(filePath).readAsBytes();
     final parts=file.name.split('.');
     final original=parts.length>1?parts.sublist(0,parts.length-1).join('.'):file.name;
-    final family='custom_'+original.replaceAll(RegExp(r'[^A-Za-z0-9_]+'),'_')+'_'+DateTime.now().millisecondsSinceEpoch.toString();
+    final family = 'custom_${original.replaceAll(RegExp(r'[^A-Za-z0-9_]+'), '_')}_${DateTime.now().millisecondsSinceEpoch}';
     final dir=await getApplicationDocumentsDirectory();
-    final folder=Directory(dir.path+'/custom_fonts');
+    final folder = Directory('${dir.path}/custom_fonts');
     if(!await folder.exists())await folder.create(recursive:true);
     final ext=(file.extension??'ttf').toLowerCase();
-    final saved=File(folder.path+'/'+family+'.'+ext);
+    final saved = File('${folder.path}/$family.$ext');
     await saved.writeAsBytes(bytes,flush:true);
     try {
       final loader=FontLoader(family)..addFont(Future.value(ByteData.sublistView(bytes)));
@@ -211,7 +208,7 @@ class _NotesPageState extends State<NotesPage> {
     }
     customFonts[family]=saved.path;
     await repository.saveCustomFonts(customFonts);
-    if(mounted){setState((){});ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('فونت «'+original+'» اضافه شد. اکنون نام آن را در بخش فونت تم انتخاب کن.')));}
+    if(mounted){setState((){});ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('فونت «$original» اضافه شد. اکنون نام آن را در بخش فونت تم انتخاب کن.')));}
   }
   List<Note> get filtered {
     final q=search.text.trim().toLowerCase();
@@ -245,7 +242,7 @@ class _NotesPageState extends State<NotesPage> {
     final ops = <Map<String, dynamic>>[];
     for (final item in legacy) {
       if (item['type'] == 'image') { ops.add({'insert': {'image': item['path']}}); ops.add({'insert': '\n'}); }
-      else { ops.add({'insert': (item['text'] as String? ?? '') + '\n'}); }
+      else { ops.add({'insert': '${item['text'] as String? ?? ''}\n'}); }
     }
     return ops;
   }
@@ -661,7 +658,7 @@ class _NotesPageState extends State<NotesPage> {
       ]))));
   }
 
-  String date(DateTime d)=>d.year.toString()+'/'+d.month.toString().padLeft(2,'0')+'/'+d.day.toString().padLeft(2,'0');
+  String date(DateTime d) => '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
   @override
   void dispose(){search.dispose();noteAudioPlayer.dispose();super.dispose();}
   @override
@@ -674,7 +671,7 @@ class _NotesPageState extends State<NotesPage> {
         Padding(padding:const EdgeInsets.fromLTRB(20,8,20,18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           TextField(controller:search,decoration:InputDecoration(hintText:'جستجو در یادداشت‌ها...',prefixIcon:const Icon(Icons.search),suffixIcon:search.text.isEmpty?null:IconButton(onPressed:search.clear,icon:const Icon(Icons.close)),filled:true,fillColor:Colors.white,border:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide.none))),
           const SizedBox(height:14),
-          Text(notes.length.toString()+' یادداشت در دفترچه‌ات داری',style:TextStyle(color:Colors.grey.shade600)),
+          Text('${notes.length} یادداشت در دفترچه‌ات داری',style:TextStyle(color:Colors.grey.shade600)),
           const SizedBox(height:12),
           const Text('پوشه‌ها',style:TextStyle(fontWeight:FontWeight.bold)),
           SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
@@ -686,12 +683,12 @@ class _NotesPageState extends State<NotesPage> {
         ])),
         Expanded(child:loading?const Center(child:CircularProgressIndicator()):items.isEmpty
           ?Center(child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.menu_book_rounded,size:64,color:Color(0xFF9B8CCB)),const SizedBox(height:12),Text(search.text.isEmpty?(selectedFolderId==null?'دفترچه‌ات هنوز خالی است':'این پوشه هنوز خالی است'):'یادداشتی پیدا نشد',style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),const SizedBox(height:8),Text(search.text.isEmpty?'اولین یادداشتت را بنویس.':'عبارت دیگری را جستجو کن.'),if(search.text.isEmpty)...[const SizedBox(height:14),FilledButton(onPressed:()=>edit(),child:const Text('نوشتن اولین یادداشت'))]]))
-          :ListView.separated(padding:const EdgeInsets.fromLTRB(20,0,20,100),itemCount:items.length,separatorBuilder:(_,__)=>const SizedBox(height:10),itemBuilder:(_,i){
+          :ListView.separated(padding:const EdgeInsets.fromLTRB(20,0,20,100),itemCount:items.length,separatorBuilder: (_, _) => const SizedBox(height: 10),itemBuilder:(_,i){
             final n=items[i];
             return Card(elevation:0,color:Color(n.themeColor),child:InkWell(onTap:()=>edit(n),child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
               Row(children:[Expanded(child:Text(n.title.isEmpty?'بدون عنوان':n.title,style:TextStyle(fontWeight:FontWeight.bold,fontSize:16,color:Color(n.themeTextColor),fontFamily:n.themeFontFamily))),IconButton(tooltip:'گزینه‌های یادداشت',onPressed:()=>showNoteMenu(n),icon:const Icon(Icons.more_vert))]),
               if(_notePlainText(n.body).isNotEmpty)Text(_notePlainText(n.body),maxLines:3,overflow:TextOverflow.ellipsis,style:TextStyle(color:Color(n.themeTextColor),fontFamily:n.themeFontFamily)),
-              if(n.images.isNotEmpty)Padding(padding:const EdgeInsets.only(top:8),child:Text(n.images.length.toString()+' تصویر پیوست شده',style:TextStyle(color:Color(n.themeTextColor).withOpacity(.7),fontSize:12,fontFamily:n.themeFontFamily))),
+              if(n.images.isNotEmpty)Padding(padding:const EdgeInsets.only(top:8),child:Text('${n.images.length} تصویر پیوست شده',style:TextStyle(color:Color(n.themeTextColor).withValues(alpha: .7),fontSize:12,fontFamily:n.themeFontFamily))),
               if(n.audios.isNotEmpty)Padding(
                 padding:const EdgeInsets.only(top:8),
                 child:Wrap(
@@ -709,12 +706,12 @@ class _NotesPageState extends State<NotesPage> {
                         ),
                         label:Text('پخش ویس ${audioIndex+1}',style:TextStyle(color:Color(n.themeTextColor),fontFamily:n.themeFontFamily)),
                         onPressed:()=>playNoteAudio(n.audios[audioIndex]),
-                        backgroundColor:Color(n.themeColor).withOpacity(.75),
+                        backgroundColor:Color(n.themeColor).withValues(alpha: .75),
                       ),
                   ],
                 ),
               ),
-              const SizedBox(height:8),Text(date(n.updated),style:TextStyle(fontSize:11,color:Color(n.themeTextColor).withOpacity(.65),fontFamily:n.themeFontFamily)),
+              const SizedBox(height:8),Text(date(n.updated),style:TextStyle(fontSize:11,color:Color(n.themeTextColor).withValues(alpha: .65),fontFamily:n.themeFontFamily)),
             ]))));
           })),
       ])),
@@ -840,9 +837,9 @@ class _EditorPageState extends State<EditorPage> {
       return;
     }
     final dir=await getApplicationDocumentsDirectory();
-    final folder=Directory(dir.path+'/notebook_audio');
+    final folder = Directory('${dir.path}/notebook_audio');
     if(!await folder.exists())await folder.create(recursive:true);
-    final path=folder.path+'/voice_'+DateTime.now().microsecondsSinceEpoch.toString()+'.m4a';
+    final path = '${folder.path}/voice_${DateTime.now().microsecondsSinceEpoch}.m4a';
     await recorder.start(const RecordConfig(encoder:AudioEncoder.aacLc),path:path);
     if(mounted)setState(()=>isRecording=true);
   }
@@ -890,11 +887,11 @@ class _EditorPageState extends State<EditorPage> {
   void save() {
     final delta = controller.document.toDelta().toJson();
     final plain = controller.document.toPlainText().trim();
-    final hasContent = delta.any((op) => op is Map && op['insert'] is Map);
+    final hasContent = delta.any((op) => op['insert'] is Map);
     if (title.text.trim().isEmpty && plain.isEmpty && !hasContent) { Navigator.pop(context); return; }
     final imagePaths = <String>[];
     for (final op in delta) {
-      if (op is Map && op['insert'] is Map) {
+      if (op['insert'] is Map) {
         final image = (op['insert'] as Map)['image'];
         if (image is String && !image.startsWith('http')) imagePaths.add(image);
       }
@@ -1053,9 +1050,9 @@ class _DrawingPageState extends State<DrawingPage>{
       final data=await image.toByteData(format:ui.ImageByteFormat.png);
       if(data==null)return;
       final dir=await getApplicationDocumentsDirectory();
-      final folder=Directory(dir.path+'/notebook_images');
+      final folder = Directory('${dir.path}/notebook_images');
       if(!await folder.exists())await folder.create(recursive:true);
-      final file=File(folder.path+'/drawing_'+DateTime.now().microsecondsSinceEpoch.toString()+'.png');
+      final file = File('${folder.path}/drawing_${DateTime.now().microsecondsSinceEpoch}.png');
       await file.writeAsBytes(data.buffer.asUint8List());
       if(mounted)Navigator.pop(context,file.path);
     }catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('ذخیره تصویر انجام نشد. دوباره تلاش کن.')));}
