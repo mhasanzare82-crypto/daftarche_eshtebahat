@@ -8,13 +8,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_localizations:
-    sdk: flutter
   archive: ^4.6.0
   audioplayers: ^6.5.1
   dart_quill_delta: ^10.8.3
   file_picker: ^13.3.3
   flutter_quill: ^11.4.2
+  material_ui: ^1.0.0
   flutter_quill_extensions: ^11.0.0
   image_picker: ^1.1.2
   path_provider: ^2.1.5
