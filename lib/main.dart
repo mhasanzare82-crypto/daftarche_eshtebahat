@@ -73,6 +73,11 @@ class NotebookApp extends StatelessWidget {
     theme: ThemeData(useMaterial3: true, colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6956A5)), scaffoldBackgroundColor: const Color(0xFFF7F5FB)),
     localizationsDelegates: [...GlobalMaterialLocalizations.delegates, quill.FlutterQuillLocalizations.delegate],
     supportedLocales: const [Locale('fa'), Locale('en')],
+    // flutter_quill (and flutter_quill_extensions) still use the legacy
+    // package:flutter/material.dart API. Keep this bridge until those upstream
+    // packages migrate to material_ui; scope the deprecation exception to this
+    // compatibility boundary rather than weakening analyzer rules project-wide.
+    // ignore: deprecated_member_use
     builder: (context, child) => MaterialUiCompatibilityBridge(child: child!),
     home: const NotesPage(),
   );
