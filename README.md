@@ -2,7 +2,7 @@
 
 نسخه مستقل برنامه دفترچه ترید با نام و شناسه نصب متفاوت.
 
-امکانات:
+## امکانات
 - ثبت، ویرایش، حذف و جست‌وجوی یادداشت‌ها
 - پوشه‌بندی و انتقال یادداشت‌ها
 - ویرایشگر متن غنی فارسی و راست‌چین
@@ -12,10 +12,20 @@
 - تم‌ها، رنگ‌ها و فونت‌های قابل شخصی‌سازی
 - ضبط و پخش یادداشت صوتی
 
+## پیش‌نیازهای ساخت
+- Flutter 3.50.0 یا بالاتر
+- Dart 3.12.0 یا بالاتر
+- Java 17
+- Android Gradle Plugin 9.3.1 و Gradle 9.5.0
+
 ## ساخت APK
 ```bash
 flutter pub get
+flutter analyze
 flutter build apk --release
 ```
 
-شناسه اندروید: `com.mhasanzare82.daftarcheeshtebahat`
+خروجی APK:
+`build/app/outputs/flutter-apk/app-release.apk`
+
+شناسه نصب اندروید: `com.mhasanzare82.daftarcheeshtebahat`
