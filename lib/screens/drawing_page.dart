@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'dart:ui' as ui;
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -24,9 +24,9 @@ class _DrawingPageState extends State<DrawingPage>{
       final data=await image.toByteData(format:ui.ImageByteFormat.png);
       if(data==null)return;
       final dir=await getApplicationDocumentsDirectory();
-      final folder=Directory(dir.path+'/notebook_images');
+      final folder=Directory('${dir.path}/notebook_images');
       if(!await folder.exists())await folder.create(recursive:true);
-      final file=File(folder.path+'/drawing_'+DateTime.now().microsecondsSinceEpoch.toString()+'.png');
+      final file=File('${folder.path}/drawing_${DateTime.now().microsecondsSinceEpoch}.png');
       await file.writeAsBytes(data.buffer.asUint8List());
       if(mounted)Navigator.pop(context,file.path);
     }catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('ذخیره تصویر انجام نشد. دوباره تلاش کن.')));}
