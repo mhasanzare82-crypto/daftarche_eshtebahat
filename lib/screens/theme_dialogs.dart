@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../models/note.dart';
 
 class ThemeManagerDialog extends StatefulWidget {
@@ -63,7 +63,7 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
                     color: Color(theme.backgroundColor),
                     child: ListTile(
                       title: Text(theme.name, style: TextStyle(color: Color(theme.textColor), fontFamily: theme.fontFamily)),
-                      subtitle: Text('پس‌زمینه، رنگ متن و فونت', style: TextStyle(color: Color(theme.textColor).withOpacity(.75))),
+                      subtitle: Text('پس‌زمینه، رنگ متن و فونت', style: TextStyle(color: Color(theme.textColor).withValues(alpha: .75))),
                       leading: CircleAvatar(backgroundColor: Color(theme.backgroundColor), child: Icon(Icons.text_fields, color: Color(theme.textColor))),
                       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                         IconButton(tooltip: 'ویرایش', onPressed: () => editTheme(theme), icon: const Icon(Icons.edit_outlined)),
