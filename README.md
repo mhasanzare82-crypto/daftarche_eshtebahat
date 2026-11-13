@@ -1,19 +1,21 @@
-# EXM1
+# دفترچه اشتباهات ترید
 
-A new Flutter project created with FlutLab - https://flutlab.io
+نسخه مستقل برنامه دفترچه ترید با نام و شناسه نصب متفاوت.
 
-## Getting Started
+امکانات:
+- ثبت، ویرایش، حذف و جست‌وجوی یادداشت‌ها
+- پوشه‌بندی و انتقال یادداشت‌ها
+- ویرایشگر متن غنی فارسی و راست‌چین
+- افزودن تصویر و حاشیه‌نویسی روی تصویر
+- ورود و خروجی گروهی و تکی فایل‌های Word (DOCX)
+- پشتیبان‌گیری و بازیابی اطلاعات
+- تم‌ها، رنگ‌ها و فونت‌های قابل شخصی‌سازی
+- ضبط و پخش یادداشت صوتی
 
-A few resources to get you started if this is your first Flutter project:
+## ساخت APK
+```bash
+flutter pub get
+flutter build apk --release
+```
 
-- https://flutter.dev/docs/get-started/codelab
-- https://flutter.dev/docs/cookbook
-
-For help getting started with Flutter, view our
-https://flutter.dev/docs, which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-
-## Getting Started: FlutLab - Flutter Online IDE
-
-- How to use FlutLab? Please, view our https://flutlab.io/docs
-- Join the discussion and conversation on https://flutlab.io/residents
+شناسه اندروید: `com.mhasanzare82.daftarcheeshtebahat`
