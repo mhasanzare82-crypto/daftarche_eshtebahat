@@ -19,7 +19,7 @@ class ThemeManagerDialog extends StatefulWidget {
 class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
   late List<NoteTheme> palette;
   late List<String> fonts;
-  double hue = 265, saturation = .28, brightness = .94;
+  double hue = 220, saturation = .06, brightness = .78;
   bool addingFonts = false;
   static const builtInFonts = ['sans-serif','serif','monospace','sans-serif-condensed','sans-serif-light','sans-serif-medium','cursive'];
   @override void initState() { super.initState(); palette = [...widget.initialThemes]; fonts = {...builtInFonts, ...widget.customFonts}.toList(); }
