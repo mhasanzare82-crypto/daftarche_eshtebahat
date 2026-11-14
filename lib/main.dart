@@ -65,14 +65,19 @@ String _notePlainText(String body) {
       .trim();
 }
 
+final ValueNotifier<String> appInterfaceFontFamily = ValueNotifier<String>('sans-serif');
+
 void main() => runApp(const NotebookApp());
 class NotebookApp extends StatelessWidget {
   const NotebookApp({super.key});
   @override
-  Widget build(BuildContext context) => MaterialApp(
+  Widget build(BuildContext context) => ValueListenableBuilder<String>(
+    valueListenable: appInterfaceFontFamily,
+    builder: (context, interfaceFont, _) => MaterialApp(
     debugShowCheckedModeBanner: false, title: 'دفترچه اشتباهات ترید',
     theme: ThemeData(
       useMaterial3: true,
+      fontFamily: interfaceFont,
       colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF34383D)).copyWith(
         primary: const Color(0xFF34383D),
         onPrimary: const Color(0xFFF4F5F6),
@@ -187,6 +192,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       final loadedPinnedNoteIds = await repository.loadPinnedNoteIds();
       final loadedPinnedFolderIds = await repository.loadPinnedFolderIds();
       final loadedTextColorPalette = await repository.loadTextColorPalette();
+      final loadedAppFontFamily = await repository.loadAppInterfaceFontFamily();
       notes.addAll(loadedNotes);
       featuredNote = _randomNote(loadedNotes);
       themes.addAll(loadedThemes);
@@ -196,6 +202,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       pinnedNoteIds.addAll(loadedPinnedNoteIds);
       pinnedFolderIds.addAll(loadedPinnedFolderIds);
       textColorPalette.addAll(loadedTextColorPalette);
+      appInterfaceFontFamily.value = loadedAppFontFamily;
       for (final entry in customFonts.entries) {
         try {
           final file = File(entry.value);
@@ -278,6 +285,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       customFonts:customFonts.keys.toList(),
       initialRandomThemeNames:randomThemeNames.toList(),
       initialTextColorPalette:List<int>.of(textColorPalette),
+      initialAppFontFamily:appInterfaceFontFamily.value,
       onAddCustomFont:() async {
         await addCustomFont();
         return customFonts.keys.toList();
@@ -288,10 +296,12 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
         themes..clear()..addAll(result.themes);
         randomThemeNames..clear()..addAll(result.randomThemeNames);
         textColorPalette..clear()..addAll(result.textColorPalette);
+        appInterfaceFontFamily.value = result.appFontFamily;
       });
       await persistThemes();
       await repository.saveRandomThemeNames(randomThemeNames.toList());
       await repository.saveTextColorPalette(textColorPalette);
+      await repository.saveAppInterfaceFontFamily(result.appFontFamily);
     }
   }
   Future<void> addCustomFont() async {
