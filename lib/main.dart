@@ -99,6 +99,7 @@ class _NotesPageState extends State<NotesPage> {
   String? currentlyPlayingAudio;
   String? selectedFolderId;
   bool loading=true;
+  Note? featuredNote;
   final customFonts=<String, String>{};
   static const defaultThemes=[NoteTheme('یاسی',0xFFEDE7F6),NoteTheme('آبی',0xFFE3F2FD),NoteTheme('سبز',0xFFE8F5E9),NoteTheme('صورتی',0xFFFCE4EC),NoteTheme('هلویی',0xFFFFEAD5)];
 
@@ -111,6 +112,7 @@ class _NotesPageState extends State<NotesPage> {
       final loadedFolders = await repository.loadFolders();
       final loadedFonts = await repository.loadCustomFonts();
       notes.addAll(loadedNotes);
+      featuredNote = _randomNote(loadedNotes);
       themes.addAll(loadedThemes);
       folders.addAll(loadedFolders);
       customFonts.addAll(loadedFonts);
@@ -210,6 +212,8 @@ class _NotesPageState extends State<NotesPage> {
     await repository.saveCustomFonts(customFonts);
     if(mounted){setState((){});ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('فونت «$original» اضافه شد. اکنون نام آن را در بخش فونت تم انتخاب کن.')));}
   }
+  Note? _randomNote(List<Note> source) => source.isEmpty ? null : source[Random().nextInt(source.length)];
+
   List<Note> get filtered {
     final q=search.text.trim().toLowerCase();
     final list=notes.where((n)=>(selectedFolderId==null||n.folderId==selectedFolderId)&&(n.title.toLowerCase().contains(q)||_notePlainText(n.body).toLowerCase().contains(q))).toList();
@@ -219,14 +223,14 @@ class _NotesPageState extends State<NotesPage> {
     final selected=note==null?(themes.isEmpty?defaultThemes.first:themes[Random().nextInt(themes.length)]):NoteTheme('فعلی',note.themeColor,note.themeTextColor,note.themeFontFamily);
     final result=await Navigator.push<Note>(context,MaterialPageRoute(builder:(_)=>EditorPage(note:note,themes:themes,customFonts:customFonts.keys.toList(),initialTheme:selected,initialFolderId:note?.folderId??selectedFolderId)));
     if(result==null)return;
-    setState(() { final i=notes.indexWhere((n)=>n.id==result.id); if(i<0){notes.add(result);}else{notes[i]=result;} });
+    setState(() { final i=notes.indexWhere((n)=>n.id==result.id); if(i<0){notes.add(result);}else{notes[i]=result;} if(featuredNote?.id==result.id)featuredNote=result; });
     await persist();
   }
   Future<void> remove(Note n) async {
     final yes=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(
       title:const Text('حذف یادداشت؟'),content:const Text('این یادداشت حذف خواهد شد.'),
       actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('انصراف')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('حذف'))]));
-    if(yes==true){setState(()=>notes.removeWhere((x)=>x.id==n.id));await persist();}
+    if(yes==true){setState((){notes.removeWhere((x)=>x.id==n.id);if(featuredNote?.id==n.id)featuredNote=_randomNote(notes);});await persist();}
   }
 
   String _xmlEscape(String value) => value.replaceAll('&', '&amp;')
@@ -668,6 +672,31 @@ class _NotesPageState extends State<NotesPage> {
       appBar:AppBar(title:const Text('دفترچه یادداشت',style:TextStyle(fontWeight:FontWeight.bold)),actions:[PopupMenuButton<String>(tooltip:'ورود و خروجی فایل‌ها',onSelected:(value){if(value=='import')importDocx();if(value=='export')exportDocx(notes);if(value=='backup')createBackup();if(value=='restore')restoreBackup();},itemBuilder:(context)=>const [PopupMenuItem(value:'import',child:ListTile(leading:Icon(Icons.file_open),title:Text('ورود گروهی DOCX'))),PopupMenuItem(value:'export',child:ListTile(leading:Icon(Icons.file_download),title:Text('خروجی گروهی DOCX'))),PopupMenuDivider(),PopupMenuItem(value:'backup',child:ListTile(leading:Icon(Icons.backup_outlined),title:Text('ساخت فایل پشتیبان'))),PopupMenuItem(value:'restore',child:ListTile(leading:Icon(Icons.settings_backup_restore),title:Text('بازیابی فایل پشتیبان')))]),IconButton(tooltip:'ایجاد پوشه',onPressed:createFolder,icon:const Icon(Icons.create_new_folder_outlined)),IconButton(tooltip:'مدیریت تم‌ها',onPressed:manageThemes,icon:const Icon(Icons.palette_outlined)),IconButton(onPressed:()=>edit(),icon:const Icon(Icons.add_rounded))]),
       floatingActionButton:FloatingActionButton.extended(onPressed:()=>edit(),icon:const Icon(Icons.edit_note_rounded),label:const Text('یادداشت جدید')),
       body:SafeArea(child:Column(children:[
+        if(!loading && featuredNote != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 4),
+            child: Material(
+              color: Color(featuredNote!.themeColor),
+              borderRadius: BorderRadius.circular(16),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () => edit(featuredNote),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+                  child: Row(children: [
+                    Expanded(child: Text(
+                      featuredNote!.title.isEmpty ? 'بدون عنوان' : featuredNote!.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Color(featuredNote!.themeTextColor), fontFamily: featuredNote!.themeFontFamily),
+                    )),
+                    const SizedBox(width: 10),
+                    Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Color(featuredNote!.themeTextColor).withValues(alpha: .7)),
+                  ]),
+                ),
+              ),
+            ),
+          ),
         Padding(padding:const EdgeInsets.fromLTRB(20,8,20,18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           TextField(controller:search,decoration:InputDecoration(hintText:'جستجو در یادداشت‌ها...',prefixIcon:const Icon(Icons.search),suffixIcon:search.text.isEmpty?null:IconButton(onPressed:search.clear,icon:const Icon(Icons.close)),filled:true,fillColor:Colors.white,border:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide.none))),
           const SizedBox(height:14),
