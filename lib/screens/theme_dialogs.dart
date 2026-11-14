@@ -114,7 +114,6 @@ class _ThemeEditorDialogState extends State<ThemeEditorDialog>{
   late final TextEditingController name,font;
   late int background,textColor;
   static const commonFonts=['sans-serif','serif','monospace','sans-serif-condensed','sans-serif-light','sans-serif-medium','cursive'];
-  static const commonFonts=['sans-serif','serif','monospace','sans-serif-condensed','sans-serif-light','sans-serif-medium','cursive'];
   @override
   void initState(){
     super.initState();
@@ -172,13 +171,13 @@ class _ThemeEditorDialogState extends State<ThemeEditorDialog>{
           ],
         ),
         slider('ته‌رنگ', hsv.hue, 0, 360, (value) {
-          onChanged(hsv.withHue(value).toColor().value);
+          onChanged(hsv.withHue(value).toColor().toARGB32());
         }),
         slider('اشباع', hsv.saturation, 0, 1, (value) {
-          onChanged(hsv.withSaturation(value).toColor().value);
+          onChanged(hsv.withSaturation(value).toColor().toARGB32());
         }),
         slider('روشنایی', hsv.value, 0, 1, (value) {
-          onChanged(hsv.withValue(value).toColor().value);
+          onChanged(hsv.withValue(value).toColor().toARGB32());
         }),
       ],
     );
