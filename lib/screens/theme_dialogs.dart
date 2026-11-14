@@ -22,7 +22,7 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
   double hue = 265, saturation = .28, brightness = .94;
   bool addingFonts = false;
   static const builtInFonts = ['sans-serif','serif','monospace','sans-serif-condensed','sans-serif-light','sans-serif-medium','cursive'];
-  @override void initState() { super.initState(); palette = List.of(widget.initialThemes); fonts = [...builtInFonts, ...widget.customFonts].toSet().toList(); }
+  @override void initState() { super.initState(); palette = [...widget.initialThemes]; fonts = [...builtInFonts, ...widget.customFonts].toSet().toList(); }
   Color get selectedColor => HSVColor.fromAHSV(1, hue, saturation, brightness).toColor();
   Color readableText(Color c) => c.computeLuminance() > .42 ? const Color(0xFF211D27) : Colors.white;
   Future<void> addFonts() async {
@@ -66,7 +66,7 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
         const SizedBox(height: 8), const Text('برای حذف یک رنگ، انگشتت را روی آن نگه دار.',style:TextStyle(fontSize:11,color:Colors.black54)),
       ])),
       const Divider(height:1),
-      Padding(padding:const EdgeInsets.fromLTRB(16,10,16,12),child:Row(children:[TextButton(onPressed:()=>Navigator.pop(context),child:const Text('انصراف')),const Spacer(),FilledButton.icon(onPressed:(){final names=palette.map((item)=>item.name).toList();Navigator.pop(context,ThemeManagerResult(List.of(palette),names));},icon:const Icon(Icons.save_outlined),label:const Text('ذخیره تنظیمات'))])),
+      Padding(padding:const EdgeInsets.fromLTRB(16,10,16,12),child:Row(children:[TextButton(onPressed:()=>Navigator.pop(context),child:const Text('انصراف')),const Spacer(),FilledButton.icon(onPressed:(){final names=palette.map((item)=>item.name).toList();Navigator.pop(context,ThemeManagerResult([...palette],names));},icon:const Icon(Icons.save_outlined),label:const Text('ذخیره تنظیمات'))])),
     ])),
   ));
   Widget _sectionTitle(String title, IconData icon) => Row(children:[Icon(icon,size:20,color:Theme.of(context).colorScheme.primary),const SizedBox(width:8),Text(title,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:15))]);
