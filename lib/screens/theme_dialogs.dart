@@ -6,7 +6,8 @@ class ThemeManagerResult {
   final List<String> randomThemeNames;
   final List<int> textColorPalette;
   final String appFontFamily;
-  const ThemeManagerResult(this.themes, this.randomThemeNames, this.textColorPalette, this.appFontFamily);
+  final String appThemeName;
+  const ThemeManagerResult(this.themes, this.randomThemeNames, this.textColorPalette, this.appFontFamily, this.appThemeName);
 }
 
 class ThemeManagerDialog extends StatefulWidget {
@@ -15,6 +16,7 @@ class ThemeManagerDialog extends StatefulWidget {
   final List<String> initialRandomThemeNames;
   final List<int> initialTextColorPalette;
   final String initialAppFontFamily;
+  final String initialAppThemeName;
   final Future<List<String>> Function()? onAddCustomFont;
   const ThemeManagerDialog({
     super.key,
@@ -23,6 +25,7 @@ class ThemeManagerDialog extends StatefulWidget {
     this.initialRandomThemeNames = const [],
     this.initialTextColorPalette = const [],
     this.initialAppFontFamily = 'sans-serif',
+    this.initialAppThemeName = 'دودی',
     this.onAddCustomFont,
   });
   @override
@@ -34,6 +37,7 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
   late List<String> fonts;
   late List<int> textColorPalette;
   late String appFontFamily;
+  late String appThemeName;
   double hue = 220, saturation = .06, brightness = .78;
   bool addingFonts = false;
   static const builtInFonts = ['sans-serif'];
@@ -45,6 +49,7 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
     fonts = {...builtInFonts, ...widget.customFonts}.toList();
     textColorPalette = [...widget.initialTextColorPalette];
     appFontFamily = widget.initialAppFontFamily;
+    appThemeName = widget.initialAppThemeName;
   }
 
   Color get selectedColor => HSVColor.fromAHSV(1, hue, saturation, brightness).toColor();
@@ -128,10 +133,28 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
               )).toList(),
               onChanged: (value) { if (value != null) setState(() => appFontFamily = value); },
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 22),
             const Divider(),
             const SizedBox(height: 12),
-            _sectionTitle('۲. انتخاب رنگ', Icons.palette_outlined),
+            _sectionTitle('۲. تم اصلی برنامه', Icons.contrast_outlined),
+            const SizedBox(height: 6),
+            const Text('ظاهر کلی برنامه، پس‌زمینه صفحه‌ها، نوار بالا و رنگ اجزای رابط کاربری را انتخاب کن. این تنظیم از تم یادداشت‌ها جداست.', style: TextStyle(fontSize: 12, color: Colors.black54)),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              initialValue: ['سفید', 'سیاه', 'دودی', 'نقره‌ای'].contains(appThemeName) ? appThemeName : 'دودی',
+              decoration: const InputDecoration(labelText: 'تم اصلی برنامه', border: OutlineInputBorder()),
+              items: const [
+                DropdownMenuItem(value: 'سفید', child: Text('سفید')),
+                DropdownMenuItem(value: 'سیاه', child: Text('سیاه')),
+                DropdownMenuItem(value: 'دودی', child: Text('دودی')),
+                DropdownMenuItem(value: 'نقره‌ای', child: Text('نقره‌ای')),
+              ],
+              onChanged: (value) { if (value != null) setState(() => appThemeName = value); },
+            ),
+            const SizedBox(height: 22),
+            const Divider(),
+            const SizedBox(height: 12),
+            _sectionTitle('۳. انتخاب رنگ', Icons.palette_outlined),
             const SizedBox(height: 8),
             const Text('سه اسلایدر را تنظیم کن و سپس رنگ انتخاب‌شده را به پالت پس‌زمینه یا پالت رنگ متن اضافه کن.', style: TextStyle(fontSize: 12, color: Colors.black54)),
             const SizedBox(height: 12),
@@ -209,7 +232,7 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
             FilledButton.icon(
               onPressed: () {
                 final names = palette.map((item) => item.name).toList();
-                Navigator.pop(context, ThemeManagerResult([...palette], names, [...textColorPalette], appFontFamily));
+                Navigator.pop(context, ThemeManagerResult([...palette], names, [...textColorPalette], appFontFamily, appThemeName));
               },
               icon: const Icon(Icons.save_outlined),
               label: const Text('ذخیره تنظیمات'),
