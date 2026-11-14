@@ -827,11 +827,6 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(Icons.auto_awesome_rounded, size: 14, color: foreground.withValues(alpha: .85)),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'پیشنهاد تصادفی',
-                                    style: TextStyle(color: foreground.withValues(alpha: .85), fontSize: 11, fontWeight: FontWeight.w600),
-                                  ),
                                 ],
                               ),
                             ),
