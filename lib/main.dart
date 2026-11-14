@@ -497,8 +497,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
             final rid = 'rIdImage$imageIndex';
             relationships.add('<Relationship Id="$rid" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/$name"/>');
             runs.write(_docxImageDrawing(rid));
-          }
-        }      }
+          }        }      }
       if (runs.isNotEmpty) flushParagraph();
       paragraphs.add('<w:p/>');
     }
@@ -997,8 +996,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
                         ),
                       )],
                     ),
-                  ]),                )),
-              ],
+                  ]),                )),              ],
             ),
           ),
           const SizedBox(height:16),
@@ -1166,7 +1164,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
   Future<void> toggleRecording() async {
     if(isRecording){
       final path=await recorder.stop();
-      if(path!=null&&mounted)setState(()=>audioPaths.add(path));
+      if(path!=null&&mounted){setState(()=>audioPaths.add(path));_scheduleAutoSave();}
       if(mounted)setState(()=>isRecording=false);
       return;
     }
@@ -1215,7 +1213,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     final input=TextEditingController(text:'20');
     final value=await showDialog<double>(context:context,builder:(ctx)=>Directionality(textDirection:TextDirection.rtl,child:AlertDialog(
       title:const Text('اندازه متن'),
-      content:TextField(controller:input,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'اندازه بر حسب پوینت',hintText:'مثلاً 16')),
+      content:TextField(controller:input,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'اندازه بر حسب پوینت',hintText:'مثلاً 20')),
       actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('انصراف')),FilledButton(onPressed:(){final n=double.tryParse(input.text.trim());if(n!=null&&n>=6&&n<=42)Navigator.pop(ctx,n);},child:const Text('اعمال'))],
     )));
     input.dispose();
@@ -1338,6 +1336,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
                             currentlyPlayingEditorAudio = null;
                           }
                           audioPaths.removeAt(i);
+                          _scheduleAutoSave();
                         }),
                       ),
                     ),
