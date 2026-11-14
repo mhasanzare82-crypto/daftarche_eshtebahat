@@ -73,6 +73,8 @@ class NotebookApp extends StatelessWidget {
     theme: ThemeData(useMaterial3: true, colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6956A5)), scaffoldBackgroundColor: const Color(0xFFF7F5FB)),
     localizationsDelegates: [...GlobalMaterialLocalizations.delegates, quill.FlutterQuillLocalizations.delegate],
     supportedLocales: const [Locale('fa'), Locale('en')],
+    // Legacy Flutter-based dependencies still need this migration bridge.
+    // ignore: deprecated_member_use
     builder: (context, child) => MaterialUiCompatibilityBridge(child: child!),
     home: const NotesPage(),
   );
@@ -185,7 +187,7 @@ class _NotesPageState extends State<NotesPage> {
     }
   }
   Future<void> addCustomFont() async {
-    final picked=await FilePicker.pickFiles(type:FileType.custom,allowedExtensions:['ttf','otf'],allowMultiple:true);
+    final picked=await FilePicker.pickFiles(type:FileType.custom,allowedExtensions:['ttf','otf']);
     if(picked.isEmpty)return;
     var added = 0;
     final failures = <String>[];
