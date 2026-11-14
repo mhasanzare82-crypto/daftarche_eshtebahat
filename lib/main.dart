@@ -70,7 +70,28 @@ class NotebookApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MaterialApp(
     debugShowCheckedModeBanner: false, title: 'دفترچه اشتباهات ترید',
-    theme: ThemeData(useMaterial3: true, colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF6956A5)), scaffoldBackgroundColor: const Color(0xFFF7F5FB)),
+    theme: ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF34383D)).copyWith(
+        primary: const Color(0xFF34383D),
+        onPrimary: const Color(0xFFF4F5F6),
+        secondary: const Color(0xFF9DA3AA),
+        onSecondary: const Color(0xFF202327),
+        surface: const Color(0xFFF7F8F9),
+      ),
+      scaffoldBackgroundColor: const Color(0xFFF0F1F3),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Color(0xFF17191C),
+        foregroundColor: Color(0xFFE5E7EA),
+        elevation: 0,
+        iconTheme: IconThemeData(color: Color(0xFFD4D7DB)),
+      ),
+      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+        backgroundColor: Color(0xFF34383D),
+        foregroundColor: Color(0xFFE5E7EA),
+        elevation: 5,
+      ),
+    ),
     localizationsDelegates: [...GlobalMaterialLocalizations.delegates, quill.FlutterQuillLocalizations.delegate],
     supportedLocales: const [Locale('fa'), Locale('en')],
     // Legacy Flutter-based dependencies still need this migration bridge.
@@ -784,16 +805,16 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
   Widget build(BuildContext context){
     final items=filtered;
     return Directionality(textDirection:TextDirection.rtl,child:Scaffold(
-      appBar:AppBar(title:const Text('دفترچه یادداشت',style:TextStyle(fontWeight:FontWeight.bold)),actions:[PopupMenuButton<String>(tooltip:'ورود و خروجی فایل‌ها',onSelected:(value){if(value=='import')importDocx();if(value=='export')exportDocx(notes);if(value=='backup')createBackup();if(value=='restore')restoreBackup();},itemBuilder:(context)=>const [PopupMenuItem(value:'import',child:ListTile(leading:Icon(Icons.file_open),title:Text('ورود گروهی DOCX'))),PopupMenuItem(value:'export',child:ListTile(leading:Icon(Icons.file_download),title:Text('خروجی گروهی DOCX'))),PopupMenuDivider(),PopupMenuItem(value:'backup',child:ListTile(leading:Icon(Icons.backup_outlined),title:Text('ساخت فایل پشتیبان'))),PopupMenuItem(value:'restore',child:ListTile(leading:Icon(Icons.settings_backup_restore),title:Text('بازیابی فایل پشتیبان')))]),IconButton(tooltip:'ایجاد پوشه',onPressed:createFolder,icon:const Icon(Icons.create_new_folder_outlined)),IconButton(tooltip:'مدیریت تم‌ها',onPressed:manageThemes,icon:const Icon(Icons.palette_outlined)),IconButton(onPressed:()=>edit(),icon:const Icon(Icons.add_rounded))]),
+      appBar:AppBar(title:const Text('دفترچه اشتباهات',style:TextStyle(fontWeight:FontWeight.bold)),actions:[PopupMenuButton<String>(tooltip:'ورود و خروجی فایل‌ها',onSelected:(value){if(value=='import')importDocx();if(value=='export')exportDocx(notes);if(value=='backup')createBackup();if(value=='restore')restoreBackup();},itemBuilder:(context)=>const [PopupMenuItem(value:'import',child:ListTile(leading:Icon(Icons.file_open),title:Text('ورود گروهی DOCX'))),PopupMenuItem(value:'export',child:ListTile(leading:Icon(Icons.file_download),title:Text('خروجی گروهی DOCX'))),PopupMenuDivider(),PopupMenuItem(value:'backup',child:ListTile(leading:Icon(Icons.backup_outlined),title:Text('ساخت فایل پشتیبان'))),PopupMenuItem(value:'restore',child:ListTile(leading:Icon(Icons.settings_backup_restore),title:Text('بازیابی فایل پشتیبان')))]),IconButton(tooltip:'ایجاد پوشه',onPressed:createFolder,icon:const Icon(Icons.create_new_folder_outlined)),IconButton(tooltip:'مدیریت تم‌ها',onPressed:manageThemes,icon:const Icon(Icons.palette_outlined)),IconButton(onPressed:()=>edit(),icon:const Icon(Icons.add_rounded))]),
       floatingActionButton:FloatingActionButton.extended(onPressed:()=>edit(),icon:const Icon(Icons.edit_note_rounded),label:const Text('یادداشت جدید')),
       body:SafeArea(child:Column(children:[
         if(!loading && featuredNote != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 10, 20, 4),
             child: Builder(builder: (context) {
-              final background = Color(_backgroundColorFor(featuredNote!));
-              final foreground = Color(featuredNote!.themeTextColor);
-              final accent = foreground.withValues(alpha: .10);
+              const background = Color(0xFF17191C);
+              const foreground = Color(0xFFE5E7EA);
+              const accent = Color(0xFF454B52);
               return Material(
                 color: background,
                 borderRadius: BorderRadius.circular(22),
@@ -807,7 +828,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
                       gradient: LinearGradient(
                         begin: Alignment.topRight,
                         end: Alignment.bottomLeft,
-                        colors: [background, Color.lerp(background, foreground, .055)!],
+                        colors: [background, const Color(0xFF30343A)],
                       ),
                       border: Border.all(color: foreground.withValues(alpha: .12)),
                       borderRadius: BorderRadius.circular(22),
@@ -900,7 +921,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
 
         ])),
         Expanded(child:loading?const Center(child:CircularProgressIndicator()):items.isEmpty
-          ?Center(child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.menu_book_rounded,size:64,color:Color(0xFF9B8CCB)),const SizedBox(height:12),Text(search.text.isEmpty?(selectedFolderId==null?'دفترچه‌ات هنوز خالی است':'این پوشه هنوز خالی است'):'یادداشتی پیدا نشد',style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),const SizedBox(height:8),Text(search.text.isEmpty?'اولین یادداشتت را بنویس.':'عبارت دیگری را جستجو کن.'),if(search.text.isEmpty)...[const SizedBox(height:14),FilledButton(onPressed:()=>edit(),child:const Text('نوشتن اولین یادداشت'))]]))
+          ?Center(child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.menu_book_rounded,size:64,color:Color(0xFF9DA3AA)),const SizedBox(height:12),Text(search.text.isEmpty?(selectedFolderId==null?'دفترچه‌ات هنوز خالی است':'این پوشه هنوز خالی است'):'یادداشتی پیدا نشد',style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),const SizedBox(height:8),Text(search.text.isEmpty?'اولین یادداشتت را بنویس.':'عبارت دیگری را جستجو کن.'),if(search.text.isEmpty)...[const SizedBox(height:14),FilledButton(onPressed:()=>edit(),child:const Text('نوشتن اولین یادداشت'))]]))
           :ListView.separated(padding:const EdgeInsets.fromLTRB(20,0,20,100),itemCount:items.length,separatorBuilder: (_, _) => const SizedBox(height: 10),itemBuilder:(_,i){
             final n=items[i];
             final backgroundColor = _backgroundColorFor(n);
