@@ -137,15 +137,18 @@ class NotebookApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ValueListenableBuilder<String>(
     valueListenable: appInterfaceFontFamily,
-    builder: (context, interfaceFont, _) => MaterialApp(
+    builder: (context, interfaceFont, _) => ValueListenableBuilder<String>(
+      valueListenable: appThemeName,
+      builder: (context, selectedTheme, _) => MaterialApp(
     debugShowCheckedModeBanner: false, title: 'دفترچه اشتباهات ترید',
-    theme: _buildAppTheme(appThemeName.value, interfaceFont),
+    theme: _buildAppTheme(selectedTheme, interfaceFont),
     localizationsDelegates: [...GlobalMaterialLocalizations.delegates, quill.FlutterQuillLocalizations.delegate],
     supportedLocales: const [Locale('fa'), Locale('en')],
     // Legacy Flutter-based dependencies still need this migration bridge.
     // ignore: deprecated_member_use
     builder: (context, child) => MaterialUiCompatibilityBridge(child: child!),
     home: const NotesPage(),
+      ),
     ),
   );
 }
