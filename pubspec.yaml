@@ -17,7 +17,7 @@ dependencies:
   flutter_quill_extensions: ^11.0.0
   image_picker: ^1.1.2
   path_provider: ^2.1.5
-  record: ^6.1.2
+  record: ^7.0.0
   shared_preferences: ^2.5.3
   xml: ^6.6.1
 dev_dependencies:
