@@ -22,13 +22,13 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
   double hue = 265, saturation = .28, brightness = .94;
   bool addingFonts = false;
   static const builtInFonts = ['sans-serif','serif','monospace','sans-serif-condensed','sans-serif-light','sans-serif-medium','cursive'];
-  @override void initState() { super.initState(); palette = [...widget.initialThemes]; fonts = [...builtInFonts, ...widget.customFonts].toSet().toList(); }
+  @override void initState() { super.initState(); palette = [...widget.initialThemes]; fonts = {...builtInFonts, ...widget.customFonts}.toList(); }
   Color get selectedColor => HSVColor.fromAHSV(1, hue, saturation, brightness).toColor();
   Color readableText(Color c) => c.computeLuminance() > .42 ? const Color(0xFF211D27) : Colors.white;
   Future<void> addFonts() async {
     if (widget.onAddCustomFont == null || addingFonts) return;
     setState(() => addingFonts = true);
-    try { final updated = await widget.onAddCustomFont!(); if (mounted) setState(() => fonts = [...builtInFonts, ...updated].toSet().toList()); }
+    try { final updated = await widget.onAddCustomFont!(); if (mounted) setState(() => fonts = {...builtInFonts, ...updated}.toList()); }
     finally { if (mounted) setState(() => addingFonts = false); }
   }
   void addSelectedColor() {
