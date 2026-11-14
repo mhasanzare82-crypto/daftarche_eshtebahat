@@ -243,6 +243,49 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
     return pool[Random().nextInt(pool.length)];
   }
 
+  Widget _folderFilterChip({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+    IconData? icon,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: selected ? scheme.primaryContainer : scheme.surfaceContainerHighest.withValues(alpha: .55),
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: selected ? scheme.primary.withValues(alpha: .55) : scheme.outlineVariant.withValues(alpha: .55),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 17, color: selected ? scheme.onPrimaryContainer : scheme.onSurfaceVariant),
+                const SizedBox(width: 7),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  color: selected ? scheme.onPrimaryContainer : scheme.onSurfaceVariant,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   List<Note> get filtered {
     final q=search.text.trim().toLowerCase();
     final list=notes.where((n)=>(selectedFolderId==null||n.folderId==selectedFolderId)&&(n.title.toLowerCase().contains(q)||_notePlainText(n.body).toLowerCase().contains(q))).toList();
@@ -797,14 +840,33 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
           ),
         Padding(padding:const EdgeInsets.fromLTRB(20,8,20,18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           TextField(controller:search,decoration:InputDecoration(hintText:'جستجو در یادداشت‌ها...',prefixIcon:const Icon(Icons.search),suffixIcon:search.text.isEmpty?null:IconButton(onPressed:search.clear,icon:const Icon(Icons.close)),filled:true,fillColor:Colors.white,border:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide.none))),
-          const SizedBox(height:14),
-          Text('${notes.length} یادداشت در دفترچه‌ات داری',style:TextStyle(color:Colors.grey.shade600)),
-          const SizedBox(height:12),
+          const SizedBox(height:16),
           const Text('پوشه‌ها',style:TextStyle(fontWeight:FontWeight.bold)),
-          SingleChildScrollView(scrollDirection:Axis.horizontal,child:Row(children:[
-            Padding(padding:const EdgeInsets.only(left:8),child:ChoiceChip(label:const Text('همه'),selected:selectedFolderId==null,onSelected:(_)=>setState(()=>selectedFolderId=null))),
-            ...folders.map((folder)=>Padding(padding:const EdgeInsets.only(left:8),child:ChoiceChip(avatar:const Icon(Icons.folder_outlined,size:17),label:Text(folder.name),selected:selectedFolderId==folder.id,onSelected:(_)=>setState(()=>selectedFolderId=folder.id)))),
-          ])),
+          const SizedBox(height:10),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: _folderFilterChip(
+                    label: 'همه',
+                    selected: selectedFolderId == null,
+                    onTap: () => setState(() => selectedFolderId = null),
+                  ),
+                ),
+                ...folders.map((folder) => Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: _folderFilterChip(
+                    label: folder.name,
+                    selected: selectedFolderId == folder.id,
+                    onTap: () => setState(() => selectedFolderId = folder.id),
+                    icon: Icons.folder_outlined,
+                  ),
+                )),
+              ],
+            ),
+          ),
           const SizedBox(height:16),
 
         ])),
