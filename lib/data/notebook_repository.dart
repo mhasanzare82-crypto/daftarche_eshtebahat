@@ -12,6 +12,7 @@ class NotebookRepository {
   static const _randomThemesKey = 'notebook_random_theme_names';
   static const _pinnedNotesKey = 'notebook_pinned_note_ids';
   static const _pinnedFoldersKey = 'notebook_pinned_folder_ids';
+  static const _textColorPaletteKey = 'notebook_text_color_palette';
 
   Future<List<Note>> loadNotes() async {
     final prefs = await SharedPreferences.getInstance();
@@ -49,6 +50,18 @@ class NotebookRepository {
     final prefs = await SharedPreferences.getInstance();
     if (!await prefs.setStringList(_pinnedFoldersKey, values)) {
       throw StateError('Unable to persist pinned folders');
+    }
+  }
+
+  Future<List<int>> loadTextColorPalette() async {
+    final prefs = await SharedPreferences.getInstance();
+    return (prefs.getStringList(_textColorPaletteKey) ?? <String>[]).map((value) => int.tryParse(value)).whereType<int>().toList();
+  }
+
+  Future<void> saveTextColorPalette(List<int> values) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!await prefs.setStringList(_textColorPaletteKey, values.map((value) => value.toString()).toList())) {
+      throw StateError('Unable to persist text color palette');
     }
   }
 

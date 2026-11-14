@@ -127,6 +127,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
   final randomThemeNames=<String>{};
   final pinnedNoteIds=<String>{};
   final pinnedFolderIds=<String>{};
+  final textColorPalette=<int>[];
   bool showPinnedOnly=false;
   final noteBackgroundColors=<String, int>{};
   static const defaultThemes=[NoteTheme('یاسی',0xFFEDE7F6),NoteTheme('آبی',0xFFE3F2FD),NoteTheme('سبز',0xFFE8F5E9),NoteTheme('صورتی',0xFFFCE4EC),NoteTheme('هلویی',0xFFFFEAD5)];
@@ -184,6 +185,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       final loadedRandomThemeNames = await repository.loadRandomThemeNames();
       final loadedPinnedNoteIds = await repository.loadPinnedNoteIds();
       final loadedPinnedFolderIds = await repository.loadPinnedFolderIds();
+      final loadedTextColorPalette = await repository.loadTextColorPalette();
       notes.addAll(loadedNotes);
       featuredNote = _randomNote(loadedNotes);
       themes.addAll(loadedThemes);
@@ -192,6 +194,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       randomThemeNames.addAll(loadedRandomThemeNames);
       pinnedNoteIds.addAll(loadedPinnedNoteIds);
       pinnedFolderIds.addAll(loadedPinnedFolderIds);
+      textColorPalette.addAll(loadedTextColorPalette);
       for (final entry in customFonts.entries) {
         try {
           final file = File(entry.value);
@@ -273,15 +276,21 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       initialThemes:List.of(themes),
       customFonts:customFonts.keys.toList(),
       initialRandomThemeNames:randomThemeNames.toList(),
+      initialTextColorPalette:List<int>.of(textColorPalette),
       onAddCustomFont:() async {
         await addCustomFont();
         return customFonts.keys.toList();
       },
     ));
     if(result!=null){
-      setState((){themes..clear()..addAll(result.themes);randomThemeNames..clear()..addAll(result.randomThemeNames);});
+      setState((){
+        themes..clear()..addAll(result.themes);
+        randomThemeNames..clear()..addAll(result.randomThemeNames);
+        textColorPalette..clear()..addAll(result.textColorPalette);
+      });
       await persistThemes();
       await repository.saveRandomThemeNames(randomThemeNames.toList());
+      await repository.saveTextColorPalette(textColorPalette);
     }
   }
   Future<void> addCustomFont() async {
@@ -387,7 +396,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
     final availableThemes = themes.where((theme) => randomThemeNames.contains(theme.name)).toList();
     final themePool = availableThemes.isEmpty ? (themes.isEmpty ? defaultThemes : themes) : availableThemes;
     final selected=note==null?themePool[Random().nextInt(themePool.length)]:NoteTheme('فعلی',note.themeColor,note.themeTextColor,note.themeFontFamily);
-    const builtInFonts = ['sans-serif','serif','monospace','sans-serif-condensed','sans-serif-light','sans-serif-medium','cursive'];
+    const builtInFonts = ['sans-serif'];
     final availableFonts = {...builtInFonts, ...customFonts.keys}.toList();
     final selectedFont = note == null
         ? availableFonts[Random().nextInt(availableFonts.length)]
@@ -709,6 +718,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
         'pinnedNoteIds': pinnedNoteIds.toList(),
         'pinnedFolderIds': pinnedFolderIds.toList(),
         'themes': themes.map((t) => t.toJson()).toList(),
+        'textColorPalette': textColorPalette,
         'images': imageData,
       });
       await FilePicker.saveFile(fileName: 'notebook_backup.json',
@@ -784,9 +794,11 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
         showPinnedOnly = false;
         pinnedNoteIds..clear()..addAll(List<String>.from(data['pinnedNoteIds'] ?? const []));
         pinnedFolderIds..clear()..addAll(List<String>.from(data['pinnedFolderIds'] ?? const []));
+        textColorPalette..clear()..addAll(List<int>.from(data['textColorPalette'] ?? const []));
       });
       await persist(); await persistFolders(); await persistThemes();
       await persistPinnedNotes(); await persistPinnedFolders();
+      await repository.saveTextColorPalette(textColorPalette);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('نسخه پشتیبان با موفقیت بازیابی شد')));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('بازیابی نسخه پشتیبان ناموفق بود: $e')));
@@ -1056,7 +1068,7 @@ class _EditorPageState extends State<EditorPage> {
   late String themeFontFamily;
   String? folderId;
   static const marker = '__quill_note_v1__';
-  static const builtInToolbarFonts = ['sans-serif','serif','monospace','sans-serif-condensed','sans-serif-light','sans-serif-medium','cursive'];
+  static const builtInToolbarFonts = ['sans-serif'];
   Map<String, String> get toolbarFontFamilies => {
     for (final family in {...builtInToolbarFonts, ...widget.customFonts, themeFontFamily})
       'نمونه یک فونت · $family': family,
