@@ -104,6 +104,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
   Note? featuredNote;
   final customFonts=<String, String>{};
   final randomThemeNames=<String>{};
+  final noteBackgroundColors=<String, int>{};
   static const defaultThemes=[NoteTheme('یاسی',0xFFEDE7F6),NoteTheme('آبی',0xFFE3F2FD),NoteTheme('سبز',0xFFE8F5E9),NoteTheme('صورتی',0xFFFCE4EC),NoteTheme('هلویی',0xFFFFEAD5)];
 
   @override
@@ -111,7 +112,39 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _refreshFeaturedNote();
+    if (state == AppLifecycleState.resumed && !loading) {
+      setState(() {
+        _randomizeNoteBackgrounds();
+        featuredNote = _randomNote(notes, excludeId: featuredNote?.id);
+      });
+    }
+  }
+
+  void _randomizeNoteBackgrounds() {
+    final availableThemes = themes.where((theme) => randomThemeNames.contains(theme.name)).toList();
+    final themePool = availableThemes.isNotEmpty
+        ? availableThemes
+        : (themes.isEmpty ? defaultThemes : themes);
+    if (themePool.isEmpty) return;
+    final random = Random();
+    noteBackgroundColors
+      ..clear()
+      ..addEntries(notes.map((note) => MapEntry(
+        note.id,
+        themePool[random.nextInt(themePool.length)].backgroundColor,
+      )));
+  }
+
+  int _backgroundColorFor(Note note) {
+    final availableThemes = themes.where((theme) => randomThemeNames.contains(theme.name)).toList();
+    final themePool = availableThemes.isNotEmpty
+        ? availableThemes
+        : (themes.isEmpty ? defaultThemes : themes);
+    if (themePool.isEmpty) return note.themeColor;
+    return noteBackgroundColors.putIfAbsent(
+      note.id,
+      () => themePool[Random().nextInt(themePool.length)].backgroundColor,
+    );
   }
 
   void _refreshFeaturedNote() {
@@ -143,6 +176,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       }
       if (themes.isEmpty) themes.addAll(defaultThemes);
       if (randomThemeNames.isEmpty) randomThemeNames.addAll(themes.map((theme) => theme.name));
+      _randomizeNoteBackgrounds();
       if (mounted) setState(() => loading = false);
       await persistThemes();
     } catch (error, stackTrace) {
@@ -301,7 +335,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
         ? availableFonts[Random().nextInt(availableFonts.length)]
         : selected.fontFamily;
     final initialTheme = NoteTheme(selected.name, selected.backgroundColor, selected.textColor, selectedFont);
-    final result=await Navigator.push<Note>(context,MaterialPageRoute(builder:(_)=>EditorPage(note:note,themes:themes,customFonts:customFonts.keys.toList(),initialTheme:initialTheme,initialFolderId:note?.folderId??selectedFolderId)));
+    final result=await Navigator.push<Note>(context,MaterialPageRoute(builder:(_)=>EditorPage(note:note,themes:themes,customFonts:customFonts.keys.toList(),initialTheme:initialTheme,initialFolderId:note?.folderId??selectedFolderId,backgroundColorOverride:note == null ? null : _backgroundColorFor(note))));
     if(result==null){_refreshFeaturedNote();return;}
     setState(() { final i=notes.indexWhere((n)=>n.id==result.id); if(i<0){notes.add(result);}else{notes[i]=result;} if(featuredNote?.id==result.id)featuredNote=result; });
     await persist();
@@ -757,7 +791,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 10, 20, 4),
             child: Builder(builder: (context) {
-              final background = Color(featuredNote!.themeColor);
+              final background = Color(_backgroundColorFor(featuredNote!));
               final foreground = Color(featuredNote!.themeTextColor);
               final accent = foreground.withValues(alpha: .10);
               return Material(
@@ -874,7 +908,8 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
           ?Center(child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.menu_book_rounded,size:64,color:Color(0xFF9B8CCB)),const SizedBox(height:12),Text(search.text.isEmpty?(selectedFolderId==null?'دفترچه‌ات هنوز خالی است':'این پوشه هنوز خالی است'):'یادداشتی پیدا نشد',style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),const SizedBox(height:8),Text(search.text.isEmpty?'اولین یادداشتت را بنویس.':'عبارت دیگری را جستجو کن.'),if(search.text.isEmpty)...[const SizedBox(height:14),FilledButton(onPressed:()=>edit(),child:const Text('نوشتن اولین یادداشت'))]]))
           :ListView.separated(padding:const EdgeInsets.fromLTRB(20,0,20,100),itemCount:items.length,separatorBuilder: (_, _) => const SizedBox(height: 10),itemBuilder:(_,i){
             final n=items[i];
-            return Card(elevation:0,color:Color(n.themeColor),child:InkWell(onTap:()=>edit(n),child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            final backgroundColor = _backgroundColorFor(n);
+            return Card(elevation:0,color:Color(backgroundColor),child:InkWell(onTap:()=>edit(n),child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
               Row(children:[Expanded(child:Text(n.title.isEmpty?'بدون عنوان':n.title,style:TextStyle(fontWeight:FontWeight.bold,fontSize:16,color:Color(n.themeTextColor),fontFamily:n.themeFontFamily))),IconButton(tooltip:'گزینه‌های یادداشت',onPressed:()=>showNoteMenu(n),icon:const Icon(Icons.more_vert))]),
               if(_notePlainText(n.body).isNotEmpty)Text(_notePlainText(n.body),maxLines:3,overflow:TextOverflow.ellipsis,style:TextStyle(color:Color(n.themeTextColor),fontFamily:n.themeFontFamily)),
               if(n.images.isNotEmpty)Padding(padding:const EdgeInsets.only(top:8),child:Text('${n.images.length} تصویر پیوست شده',style:TextStyle(color:Color(n.themeTextColor).withValues(alpha: .7),fontSize:12,fontFamily:n.themeFontFamily))),
@@ -895,7 +930,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
                         ),
                         label:Text('پخش ویس ${audioIndex+1}',style:TextStyle(color:Color(n.themeTextColor),fontFamily:n.themeFontFamily)),
                         onPressed:()=>playNoteAudio(n.audios[audioIndex]),
-                        backgroundColor:Color(n.themeColor).withValues(alpha: .75),
+                        backgroundColor:Color(backgroundColor).withValues(alpha: .75),
                       ),
                   ],
                 ),
@@ -914,7 +949,8 @@ class EditorPage extends StatefulWidget {
   final List<String> customFonts;
   final NoteTheme initialTheme;
   final String? initialFolderId;
-  const EditorPage({super.key,this.note,required this.themes,required this.customFonts,required this.initialTheme, this.initialFolderId});
+  final int? backgroundColorOverride;
+  const EditorPage({super.key,this.note,required this.themes,required this.customFonts,required this.initialTheme, this.initialFolderId, this.backgroundColorOverride});
   @override
   State<EditorPage> createState()=>_EditorPageState();
 }
@@ -970,7 +1006,7 @@ class _EditorPageState extends State<EditorPage> {
       document: doc,
       selection: const TextSelection.collapsed(offset: 0),
     );
-    themeColor = widget.note?.themeColor ?? widget.initialTheme.backgroundColor;
+    themeColor = widget.backgroundColorOverride ?? widget.note?.themeColor ?? widget.initialTheme.backgroundColor;
     themeTextColor = widget.note?.themeTextColor ?? widget.initialTheme.textColor;
     themeFontFamily = widget.note?.themeFontFamily ?? widget.initialTheme.fontFamily;
     folderId = widget.note?.folderId ?? widget.initialFolderId;
@@ -1088,7 +1124,7 @@ class _EditorPageState extends State<EditorPage> {
     Navigator.pop(context, Note(
       widget.note?.id ?? DateTime.now().microsecondsSinceEpoch.toString(),
       title.text.trim(), marker + jsonEncode(delta), DateTime.now(), imagePaths,
-      themeColor, themeTextColor, themeFontFamily, folderId, List.of(audioPaths),
+      widget.note?.themeColor ?? themeColor, themeTextColor, themeFontFamily, folderId, List.of(audioPaths),
     ));
   }
 
