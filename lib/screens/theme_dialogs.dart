@@ -63,7 +63,7 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('این رنگ قبلاً در پالت پس‌زمینه اضافه شده است.')));
       return;
     }
-    setState(() => palette.add(NoteTheme('رنگ ' + (palette.length + 1).toString(), value, readableText(color).toARGB32(), 'sans-serif')));
+    setState(() => palette.add(NoteTheme('رنگ ${palette.length + 1}', value, readableText(color).toARGB32(), 'sans-serif')));
   }
 
   void addSelectedTextColor() {
@@ -115,8 +115,8 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
             const Text('سه اسلایدر را تنظیم کن و سپس رنگ انتخاب‌شده را به پالت پس‌زمینه یا پالت رنگ متن اضافه کن.', style: TextStyle(fontSize: 12, color: Colors.black54)),
             const SizedBox(height: 12),
             _sliderRow('ته‌رنگ', hue, 0, 360, (v) => setState(() => hue = v), hue.round().toString()),
-            _sliderRow('اشباع', saturation, 0, 1, (v) => setState(() => saturation = v), (saturation * 100).round().toString() + '٪'),
-            _sliderRow('روشنایی', brightness, 0, 1, (v) => setState(() => brightness = v), (brightness * 100).round().toString() + '٪'),
+            _sliderRow('اشباع', saturation, 0, 1, (v) => setState(() => saturation = v), '${(saturation * 100).round()}٪'),
+            _sliderRow('روشنایی', brightness, 0, 1, (v) => setState(() => brightness = v), '${(brightness * 100).round()}٪'),
             const SizedBox(height: 10),
             Container(
               height: 54,
@@ -140,7 +140,7 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
             ]),
             const SizedBox(height: 18),
             Row(children: [
-              Expanded(child: Text('پالت رنگ پس‌زمینه (' + palette.length.toString() + ')', style: const TextStyle(fontWeight: FontWeight.w600))),
+              Expanded(child: Text('پالت رنگ پس‌زمینه (${palette.length})', style: const TextStyle(fontWeight: FontWeight.w600))),
               TextButton.icon(onPressed: palette.isEmpty ? null : () => setState(palette.clear), icon: const Icon(Icons.delete_sweep_outlined, size: 18), label: const Text('پاک‌کردن')),
             ]),
             if (palette.isEmpty)
@@ -161,7 +161,7 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
             const Text('برای حذف رنگ پس‌زمینه، انگشتت را روی آن نگه دار.', style: TextStyle(fontSize: 11, color: Colors.black54)),
             const SizedBox(height: 18),
             Row(children: [
-              Expanded(child: Text('پالت رنگ متن (' + textColorPalette.length.toString() + ')', style: const TextStyle(fontWeight: FontWeight.w600))),
+              Expanded(child: Text('پالت رنگ متن (${textColorPalette.length})', style: const TextStyle(fontWeight: FontWeight.w600))),
               TextButton.icon(onPressed: textColorPalette.isEmpty ? null : () => setState(textColorPalette.clear), icon: const Icon(Icons.delete_sweep_outlined, size: 18), label: const Text('پاک‌کردن')),
             ]),
             if (textColorPalette.isEmpty)
@@ -169,7 +169,7 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
             else
               Wrap(spacing: 9, runSpacing: 9, children: List.generate(textColorPalette.length, (index) {
                 final value = textColorPalette[index];
-                return Tooltip(message: '#' + value.toRadixString(16).padLeft(8, '0').toUpperCase(), child: GestureDetector(
+                return Tooltip(message: '#${value.toRadixString(16).padLeft(8, '0').toUpperCase()}', child: GestureDetector(
                   onLongPress: () => setState(() => textColorPalette.removeAt(index)),
                   child: Container(
                     width: 46, height: 46,
