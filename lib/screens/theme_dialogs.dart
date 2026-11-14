@@ -113,20 +113,7 @@ class ThemeEditorDialog extends StatefulWidget{
 class _ThemeEditorDialogState extends State<ThemeEditorDialog>{
   late final TextEditingController name,font;
   late int background,textColor;
-  static const backgrounds=[
-    0xFFFFEBEE,0xFFFCE4EC,0xFFF3E5F5,0xFFEDE7F6,0xFFE8EAF6,
-    0xFFE3F2FD,0xFFE1F5FE,0xFFE0F7FA,0xFFE0F2F1,0xFFE8F5E9,
-    0xFFF1F8E9,0xFFF9FBE7,0xFFFFFDE7,0xFFFFF8E1,0xFFFFF3E0,
-    0xFFFFEAD5,0xFFFBE9E7,0xFFEFEBE9,0xFFECEFF1,0xFFE0E0E0,
-    0xFFCFD8DC,0xFFB3E5FC,0xFFB2DFDB,0xFFC8E6C9,0xFFDCEDC8,
-    0xFFFFF9C4,0xFFFFE0B2,0xFFFFCCBC,0xFFD7CCC8,0xFFD1C4E9,
-  ];
-  static const textColors=[
-    0xFF16131C,0xFF000000,0xFF263238,0xFF37474F,0xFF1A237E,
-    0xFF0D47A1,0xFF006064,0xFF004D40,0xFF1B5E20,0xFF33691E,
-    0xFF827717,0xFF5D4037,0xFF4E342E,0xFF6D4C41,0xFF880E4F,
-    0xFFAD1457,0xFF6A1B9A,0xFF4527A0,0xFFB71C1C,0xFFFFFFFF,
-  ];
+  static const commonFonts=['sans-serif','serif','monospace','sans-serif-condensed','sans-serif-light','sans-serif-medium','cursive'];
   static const commonFonts=['sans-serif','serif','monospace','sans-serif-condensed','sans-serif-light','sans-serif-medium','cursive'];
   @override
   void initState(){
@@ -134,29 +121,87 @@ class _ThemeEditorDialogState extends State<ThemeEditorDialog>{
     final t=widget.theme;
     name=TextEditingController(text:t?.name??'');
     font=TextEditingController(text:t?.fontFamily??'sans-serif');
-    background=t?.backgroundColor??backgrounds[3];
-    textColor=t?.textColor??textColors.first;
+    background=t?.backgroundColor??0xFFEDE7F6;
+    textColor=t?.textColor??0xFF16131C;
   }
   @override
   void dispose(){name.dispose();font.dispose();super.dispose();}
+  Widget _colorPicker({
+    required String title,
+    required int colorValue,
+    required ValueChanged<int> onChanged,
+  }) {
+    final hsv = HSVColor.fromColor(Color(colorValue));
+    Widget slider(String label, double value, double min, double max, ValueChanged<double> update) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text(label)),
+              Text(value.toStringAsFixed(label == 'ته‌رنگ' ? 0 : 2)),
+            ],
+          ),
+          Slider(
+            value: value.clamp(min, max).toDouble(),
+            min: min,
+            max: max,
+            onChanged: update,
+          ),
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: Color(colorValue),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.black26),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(child: Text('#${colorValue.toRadixString(16).padLeft(8, '0').substring(2).toUpperCase()}')),
+          ],
+        ),
+        slider('ته‌رنگ', hsv.hue, 0, 360, (value) {
+          onChanged(hsv.withHue(value).toColor().value);
+        }),
+        slider('اشباع', hsv.saturation, 0, 1, (value) {
+          onChanged(hsv.withSaturation(value).toColor().value);
+        }),
+        slider('روشنایی', hsv.value, 0, 1, (value) {
+          onChanged(hsv.withValue(value).toColor().value);
+        }),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context)=>Directionality(textDirection:TextDirection.rtl,child:AlertDialog(
     title:Text(widget.theme==null?'ساخت تم جدید':'ویرایش تم'),
     content:SingleChildScrollView(child:SizedBox(width:420,child:Column(
       mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
         TextField(controller:name,maxLength:24,decoration:const InputDecoration(labelText:'نام دلخواه تم',hintText:'مثلاً شب آرام')),
-        const SizedBox(height:12),const Text('۱. رنگ پس‌زمینه (۳۰ رنگ)'),
-        const SizedBox(height:8),
-        Wrap(spacing:9,runSpacing:9,children:backgrounds.map((c)=>GestureDetector(
-          onTap:()=>setState(()=>background=c),
-          child:Container(width:32,height:32,decoration:BoxDecoration(color:Color(c),shape:BoxShape.circle,border:Border.all(color:background==c?Colors.deepPurple:Colors.black26,width:background==c?3:1))),
-        )).toList()),
-        const SizedBox(height:16),const Text('۲. رنگ متن'),
-        const SizedBox(height:8),
-        Wrap(spacing:9,runSpacing:9,children:textColors.map((c)=>GestureDetector(
-          onTap:()=>setState(()=>textColor=c),
-          child:Container(width:30,height:30,decoration:BoxDecoration(color:Color(c),shape:BoxShape.circle,border:Border.all(color:textColor==c?Colors.deepPurple:Colors.black26,width:textColor==c?3:1))),
-        )).toList()),
+        const SizedBox(height:12),
+        _colorPicker(
+          title: '۱. رنگ پس‌زمینه',
+          colorValue: background,
+          onChanged: (value) => setState(() => background = value),
+        ),
+        const SizedBox(height:18),
+        _colorPicker(
+          title: '۲. رنگ متن',
+          colorValue: textColor,
+          onChanged: (value) => setState(() => textColor = value),
+        ),
         const SizedBox(height:16),const Text('۳. فونت دلخواه'),
         TextField(controller:font,onChanged:(_)=>setState((){}),decoration:const InputDecoration(labelText:'نام فونت دستگاه یا فونت برنامه',hintText:'مثلاً sans-serif')),
         const Text('برای نمایش دقیق، فونت باید روی دستگاه موجود یا به برنامه اضافه شده باشد.',style:TextStyle(fontSize:11,color:Colors.black54)),
