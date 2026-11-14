@@ -199,7 +199,7 @@ class _NotesPageState extends State<NotesPage> {
       final bytes = await File(filePath).readAsBytes();
     final parts=file.name.split('.');
     final original=parts.length>1?parts.sublist(0,parts.length-1).join('.'):file.name;
-    final family = 'custom_${original.replaceAll(RegExp(r'[^A-Za-z0-9_]+'), '_')}_${DateTime.now().millisecondsSinceEpoch}';
+    final family = 'custom_${original.replaceAll(RegExp(r'[^A-Za-z0-9_]+'), '_')}_${DateTime.now().microsecondsSinceEpoch}';
     final dir=await getApplicationDocumentsDirectory();
     final folder = Directory('${dir.path}/custom_fonts');
     if(!await folder.exists())await folder.create(recursive:true);
