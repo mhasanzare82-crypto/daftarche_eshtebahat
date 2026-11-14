@@ -125,6 +125,9 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
   Note? featuredNote;
   final customFonts=<String, String>{};
   final randomThemeNames=<String>{};
+  final pinnedNoteIds=<String>{};
+  final pinnedFolderIds=<String>{};
+  bool showPinnedOnly=false;
   final noteBackgroundColors=<String, int>{};
   static const defaultThemes=[NoteTheme('یاسی',0xFFEDE7F6),NoteTheme('آبی',0xFFE3F2FD),NoteTheme('سبز',0xFFE8F5E9),NoteTheme('صورتی',0xFFFCE4EC),NoteTheme('هلویی',0xFFFFEAD5)];
 
@@ -179,12 +182,16 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       final loadedFolders = await repository.loadFolders();
       final loadedFonts = await repository.loadCustomFonts();
       final loadedRandomThemeNames = await repository.loadRandomThemeNames();
+      final loadedPinnedNoteIds = await repository.loadPinnedNoteIds();
+      final loadedPinnedFolderIds = await repository.loadPinnedFolderIds();
       notes.addAll(loadedNotes);
       featuredNote = _randomNote(loadedNotes);
       themes.addAll(loadedThemes);
       folders.addAll(loadedFolders);
       customFonts.addAll(loadedFonts);
       randomThemeNames.addAll(loadedRandomThemeNames);
+      pinnedNoteIds.addAll(loadedPinnedNoteIds);
+      pinnedFolderIds.addAll(loadedPinnedFolderIds);
       for (final entry in customFonts.entries) {
         try {
           final file = File(entry.value);
@@ -209,6 +216,32 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
   Future<void> persist() => repository.saveNotes(notes);
   Future<void> persistFolders() => repository.saveFolders(folders);
   Future<void> persistThemes() => repository.saveThemes(themes);
+  Future<void> persistPinnedNotes() => repository.savePinnedNoteIds(pinnedNoteIds.toList());
+  Future<void> persistPinnedFolders() => repository.savePinnedFolderIds(pinnedFolderIds.toList());
+
+  Future<void> togglePinnedNote(Note note) async {
+    setState(() {
+      if (!pinnedNoteIds.add(note.id)) pinnedNoteIds.remove(note.id);
+    });
+    await persistPinnedNotes();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(pinnedNoteIds.contains(note.id) ? 'یادداشت سنجاق شد' : 'سنجاق یادداشت برداشته شد'),
+      ));
+    }
+  }
+
+  Future<void> togglePinnedFolder(NoteFolder folder) async {
+    setState(() {
+      if (!pinnedFolderIds.add(folder.id)) pinnedFolderIds.remove(folder.id);
+    });
+    await persistPinnedFolders();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(pinnedFolderIds.contains(folder.id) ? 'پوشه سنجاق شد' : 'سنجاق پوشه برداشته شد'),
+      ));
+    }
+  }
 
   Future<void> createFolder() async {
     final controller=TextEditingController();
@@ -343,8 +376,12 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
 
   List<Note> get filtered {
     final q=search.text.trim().toLowerCase();
-    final list=notes.where((n)=>(selectedFolderId==null||n.folderId==selectedFolderId)&&(n.title.toLowerCase().contains(q)||_notePlainText(n.body).toLowerCase().contains(q))).toList();
-    list.sort((a,b)=>b.updated.compareTo(a.updated));return list;
+    final list=notes.where((n)=>(!showPinnedOnly||pinnedNoteIds.contains(n.id))&&(selectedFolderId==null||n.folderId==selectedFolderId)&&(n.title.toLowerCase().contains(q)||_notePlainText(n.body).toLowerCase().contains(q))).toList();
+    list.sort((a,b){
+      final pinOrder=(pinnedNoteIds.contains(b.id)?1:0).compareTo(pinnedNoteIds.contains(a.id)?1:0);
+      return pinOrder!=0?pinOrder:b.updated.compareTo(a.updated);
+    });
+    return list;
   }
   Future<void> edit([Note? note]) async {
     final availableThemes = themes.where((theme) => randomThemeNames.contains(theme.name)).toList();
@@ -669,6 +706,8 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
         'createdAt': DateTime.now().toIso8601String(),
         'notes': notes.map((n) => n.toJson()).toList(),
         'folders': folders.map((f) => f.toJson()).toList(),
+        'pinnedNoteIds': pinnedNoteIds.toList(),
+        'pinnedFolderIds': pinnedFolderIds.toList(),
         'themes': themes.map((t) => t.toJson()).toList(),
         'images': imageData,
       });
@@ -742,8 +781,12 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
         themes..clear()..addAll((data['themes'] as List? ?? []).map((e) => NoteTheme.fromJson(Map<String, dynamic>.from(e))));
         if (themes.isEmpty) themes.addAll(defaultThemes);
         selectedFolderId = null;
+        showPinnedOnly = false;
+        pinnedNoteIds..clear()..addAll(List<String>.from(data['pinnedNoteIds'] ?? const []));
+        pinnedFolderIds..clear()..addAll(List<String>.from(data['pinnedFolderIds'] ?? const []));
       });
       await persist(); await persistFolders(); await persistThemes();
+      await persistPinnedNotes(); await persistPinnedFolders();
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('نسخه پشتیبان با موفقیت بازیابی شد')));
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('بازیابی نسخه پشتیبان ناموفق بود: $e')));
@@ -783,6 +826,9 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
   void showNoteMenu(Note note) {
     showModalBottomSheet<void>(context: context, builder: (sheetContext) =>
       Directionality(textDirection: TextDirection.rtl, child: SafeArea(child: Wrap(children: [
+        ListTile(leading: Icon(pinnedNoteIds.contains(note.id) ? Icons.push_pin : Icons.push_pin_outlined),
+          title: Text(pinnedNoteIds.contains(note.id) ? 'برداشتن سنجاق یادداشت' : 'سنجاق کردن یادداشت'),
+          onTap: () { Navigator.pop(sheetContext); togglePinnedNote(note); }),
         ListTile(leading: const Icon(Icons.file_download_outlined),
           title: const Text('خروجی Word برای این یادداشت'),
           onTap: () { Navigator.pop(sheetContext); exportDocx([note]); }),
@@ -804,6 +850,10 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context){
     final items=filtered;
+    final visibleFolders=List<NoteFolder>.of(folders)..sort((a,b){
+      final pinOrder=(pinnedFolderIds.contains(b.id)?1:0).compareTo(pinnedFolderIds.contains(a.id)?1:0);
+      return pinOrder!=0?pinOrder:a.name.compareTo(b.name);
+    });
     return Directionality(textDirection:TextDirection.rtl,child:Scaffold(
       appBar:AppBar(title:const Text('دفترچه اشتباهات',style:TextStyle(fontWeight:FontWeight.bold)),actions:[PopupMenuButton<String>(tooltip:'ورود و خروجی فایل‌ها',onSelected:(value){if(value=='import')importDocx();if(value=='export')exportDocx(notes);if(value=='backup')createBackup();if(value=='restore')restoreBackup();},itemBuilder:(context)=>const [PopupMenuItem(value:'import',child:ListTile(leading:Icon(Icons.file_open),title:Text('ورود گروهی DOCX'))),PopupMenuItem(value:'export',child:ListTile(leading:Icon(Icons.file_download),title:Text('خروجی گروهی DOCX'))),PopupMenuDivider(),PopupMenuItem(value:'backup',child:ListTile(leading:Icon(Icons.backup_outlined),title:Text('ساخت فایل پشتیبان'))),PopupMenuItem(value:'restore',child:ListTile(leading:Icon(Icons.settings_backup_restore),title:Text('بازیابی فایل پشتیبان')))]),IconButton(tooltip:'ایجاد پوشه',onPressed:createFolder,icon:const Icon(Icons.create_new_folder_outlined)),IconButton(tooltip:'مدیریت تم‌ها',onPressed:manageThemes,icon:const Icon(Icons.palette_outlined)),IconButton(onPressed:()=>edit(),icon:const Icon(Icons.add_rounded))]),
       floatingActionButton:FloatingActionButton.extended(onPressed:()=>edit(),icon:const Icon(Icons.edit_note_rounded),label:const Text('یادداشت جدید')),
@@ -902,17 +952,40 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
                   child: _folderFilterChip(
                     label: 'همه',
                     selected: selectedFolderId == null,
-                    onTap: () => setState(() => selectedFolderId = null),
+                    onTap: () => setState(() { selectedFolderId = null; showPinnedOnly = false; }),
                   ),
                 ),
-                ...folders.map((folder) => Padding(
+                Padding(
                   padding: const EdgeInsets.only(left: 8),
                   child: _folderFilterChip(
-                    label: folder.name,
-                    selected: selectedFolderId == folder.id,
-                    onTap: () => setState(() => selectedFolderId = folder.id),
-                    icon: Icons.folder_outlined,
+                    label: 'سنجاق‌شده‌ها',
+                    selected: showPinnedOnly,
+                    onTap: () => setState(() { selectedFolderId = null; showPinnedOnly = true; }),
+                    icon: Icons.push_pin_rounded,
                   ),
+                ),
+                ...visibleFolders.map((folder) => Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    _folderFilterChip(
+                      label: folder.name,
+                      selected: selectedFolderId == folder.id && !showPinnedOnly,
+                      onTap: () => setState(() { selectedFolderId = folder.id; showPinnedOnly = false; }),
+                      icon: pinnedFolderIds.contains(folder.id) ? Icons.push_pin_rounded : Icons.folder_outlined,
+                    ),
+                    PopupMenuButton<String>(
+                      tooltip: 'گزینه‌های پوشه ${folder.name}',
+                      onSelected: (value) { if (value == 'pin') togglePinnedFolder(folder); },
+                      itemBuilder: (_) => [PopupMenuItem(
+                        value: 'pin',
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(pinnedFolderIds.contains(folder.id) ? Icons.push_pin : Icons.push_pin_outlined),
+                          title: Text(pinnedFolderIds.contains(folder.id) ? 'برداشتن سنجاق پوشه' : 'سنجاق کردن پوشه'),
+                        ),
+                      )],
+                    ),
+                  ]),
                 )),
               ],
             ),
@@ -926,7 +999,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
             final n=items[i];
             final backgroundColor = _backgroundColorFor(n);
             return Card(elevation:0,color:Color(backgroundColor),child:InkWell(onTap:()=>edit(n),child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-              Row(children:[Expanded(child:Text(n.title.isEmpty?'بدون عنوان':n.title,style:TextStyle(fontWeight:FontWeight.bold,fontSize:16,color:Color(n.themeTextColor),fontFamily:n.themeFontFamily))),IconButton(tooltip:'گزینه‌های یادداشت',onPressed:()=>showNoteMenu(n),icon:const Icon(Icons.more_vert))]),
+              Row(children:[if(pinnedNoteIds.contains(n.id))const Padding(padding:EdgeInsets.only(left:6),child:Icon(Icons.push_pin_rounded,size:17)),Expanded(child:Text(n.title.isEmpty?'بدون عنوان':n.title,style:TextStyle(fontWeight:FontWeight.bold,fontSize:16,color:Color(n.themeTextColor),fontFamily:n.themeFontFamily))),IconButton(tooltip:'گزینه‌های یادداشت',onPressed:()=>showNoteMenu(n),icon:const Icon(Icons.more_vert))]),
               if(_notePlainText(n.body).isNotEmpty)Text(_notePlainText(n.body),maxLines:3,overflow:TextOverflow.ellipsis,style:TextStyle(color:Color(n.themeTextColor),fontFamily:n.themeFontFamily)),
               if(n.images.isNotEmpty)Padding(padding:const EdgeInsets.only(top:8),child:Text('${n.images.length} تصویر پیوست شده',style:TextStyle(color:Color(n.themeTextColor).withValues(alpha: .7),fontSize:12,fontFamily:n.themeFontFamily))),
               if(n.audios.isNotEmpty)Padding(

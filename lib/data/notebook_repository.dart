@@ -10,6 +10,8 @@ class NotebookRepository {
   static const _foldersKey = 'notebook_folders';
   static const _fontsKey = 'notebook_custom_fonts';
   static const _randomThemesKey = 'notebook_random_theme_names';
+  static const _pinnedNotesKey = 'notebook_pinned_note_ids';
+  static const _pinnedFoldersKey = 'notebook_pinned_folder_ids';
 
   Future<List<Note>> loadNotes() async {
     final prefs = await SharedPreferences.getInstance();
@@ -24,6 +26,30 @@ class NotebookRepository {
   Future<List<NoteFolder>> loadFolders() async {
     final prefs = await SharedPreferences.getInstance();
     return _decodeList(prefs.getString(_foldersKey), NoteFolder.fromJson);
+  }
+
+  Future<List<String>> loadPinnedNoteIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(_pinnedNotesKey) ?? <String>[];
+  }
+
+  Future<List<String>> loadPinnedFolderIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(_pinnedFoldersKey) ?? <String>[];
+  }
+
+  Future<void> savePinnedNoteIds(List<String> values) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!await prefs.setStringList(_pinnedNotesKey, values)) {
+      throw StateError('Unable to persist pinned notes');
+    }
+  }
+
+  Future<void> savePinnedFolderIds(List<String> values) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!await prefs.setStringList(_pinnedFoldersKey, values)) {
+      throw StateError('Unable to persist pinned folders');
+    }
   }
 
   Future<List<String>> loadRandomThemeNames() async {
