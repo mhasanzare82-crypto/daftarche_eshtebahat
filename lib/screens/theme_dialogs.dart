@@ -70,19 +70,81 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
                   children: [
                     const Padding(padding: EdgeInsets.fromLTRB(8, 8, 8, 4), child: Text('برای انتخاب تصادفی هنگام ساخت یادداشت، تم‌های دلخواهت را علامت بزن.')),
                     ...items.map((theme) => Card(
-                    color: Color(theme.backgroundColor),
-                    child: ListTile(
-                      title: Text(theme.name, style: TextStyle(color: Color(theme.textColor), fontFamily: theme.fontFamily)),
-                      subtitle: Text('پس‌زمینه، رنگ متن و فونت', style: TextStyle(color: Color(theme.textColor).withValues(alpha: .75))),
-                      leading: CircleAvatar(backgroundColor: Color(theme.backgroundColor), child: Icon(Icons.text_fields, color: Color(theme.textColor))),
-                      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Checkbox(value: randomThemeNames.contains(theme.name), onChanged: (value) => setState(() { if (value == true) { randomThemeNames.add(theme.name); } else { randomThemeNames.remove(theme.name); } })),
-                        IconButton(tooltip: 'ویرایش', onPressed: () => editTheme(theme), icon: const Icon(Icons.edit_outlined)),
-                        IconButton(tooltip: 'حذف', onPressed: () { setState(() => randomThemeNames.remove(theme.name)); deleteTheme(theme); }, icon: const Icon(Icons.delete_outline)),
-                      ]),
-                      onTap: () => editTheme(theme),
-                    ),
-                  )),
+                      color: Color(theme.backgroundColor),
+                      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                      clipBehavior: Clip.antiAlias,
+                      child: InkWell(
+                        onTap: () => editTheme(theme),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor: Color(theme.backgroundColor),
+                                child: Icon(Icons.text_fields, size: 19, color: Color(theme.textColor)),
+                              ),
+                              const SizedBox(width: 9),
+                              Expanded(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      theme.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.right,
+                                      style: TextStyle(color: Color(theme.textColor), fontFamily: theme.fontFamily, fontWeight: FontWeight.w600, fontSize: 14),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'پیش‌نمایش رنگ و فونت',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.right,
+                                      style: TextStyle(color: Color(theme.textColor).withValues(alpha: .72), fontSize: 11),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Checkbox(
+                                visualDensity: VisualDensity.compact,
+                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                value: randomThemeNames.contains(theme.name),
+                                onChanged: (value) => setState(() {
+                                  if (value == true) {
+                                    randomThemeNames.add(theme.name);
+                                  } else {
+                                    randomThemeNames.remove(theme.name);
+                                  }
+                                }),
+                              ),
+                              IconButton(
+                                visualDensity: VisualDensity.compact,
+                                constraints: const BoxConstraints.tightFor(width: 34, height: 34),
+                                padding: EdgeInsets.zero,
+                                tooltip: 'ویرایش',
+                                onPressed: () => editTheme(theme),
+                                icon: const Icon(Icons.edit_outlined, size: 19),
+                              ),
+                              IconButton(
+                                visualDensity: VisualDensity.compact,
+                                constraints: const BoxConstraints.tightFor(width: 34, height: 34),
+                                padding: EdgeInsets.zero,
+                                tooltip: 'حذف',
+                                onPressed: () {
+                                  setState(() => randomThemeNames.remove(theme.name));
+                                  deleteTheme(theme);
+                                },
+                                icon: const Icon(Icons.delete_outline, size: 19),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )),
                   ],
                 ),
         ),
