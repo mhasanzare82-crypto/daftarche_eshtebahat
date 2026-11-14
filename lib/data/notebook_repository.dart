@@ -9,6 +9,7 @@ class NotebookRepository {
   static const _themesKey = 'notebook_themes';
   static const _foldersKey = 'notebook_folders';
   static const _fontsKey = 'notebook_custom_fonts';
+  static const _randomThemesKey = 'notebook_random_theme_names';
 
   Future<List<Note>> loadNotes() async {
     final prefs = await SharedPreferences.getInstance();
@@ -23,6 +24,17 @@ class NotebookRepository {
   Future<List<NoteFolder>> loadFolders() async {
     final prefs = await SharedPreferences.getInstance();
     return _decodeList(prefs.getString(_foldersKey), NoteFolder.fromJson);
+  }
+
+  Future<List<String>> loadRandomThemeNames() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(_randomThemesKey) ?? <String>[];
+  }
+
+  Future<void> saveRandomThemeNames(List<String> values) async {
+    final prefs = await SharedPreferences.getInstance();
+    final success = await prefs.setStringList(_randomThemesKey, values);
+    if (!success) throw StateError('Unable to persist random theme selection');
   }
 
   Future<Map<String, String>> loadCustomFonts() async {
