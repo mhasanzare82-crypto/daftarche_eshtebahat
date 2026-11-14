@@ -713,27 +713,87 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
         if(!loading && featuredNote != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 10, 20, 4),
-            child: Material(
-              color: Color(featuredNote!.themeColor),
-              borderRadius: BorderRadius.circular(16),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(16),
-                onTap: () => edit(featuredNote),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-                  child: Row(children: [
-                    Expanded(child: Text(
-                      featuredNote!.title.isEmpty ? 'بدون عنوان' : featuredNote!.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: Color(featuredNote!.themeTextColor), fontFamily: featuredNote!.themeFontFamily),
-                    )),
-                    const SizedBox(width: 10),
-                    Icon(Icons.arrow_back_ios_new_rounded, size: 16, color: Color(featuredNote!.themeTextColor).withValues(alpha: .7)),
-                  ]),
+            child: Builder(builder: (context) {
+              final background = Color(featuredNote!.themeColor);
+              final foreground = Color(featuredNote!.themeTextColor);
+              final accent = foreground.withValues(alpha: .10);
+              return Material(
+                color: background,
+                borderRadius: BorderRadius.circular(22),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () => edit(featuredNote),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(18, 15, 18, 17),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topRight,
+                        end: Alignment.bottomLeft,
+                        colors: [background, Color.lerp(background, foreground, .055)!],
+                      ),
+                      border: Border.all(color: foreground.withValues(alpha: .12)),
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: accent,
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.auto_awesome_rounded, size: 14, color: foreground.withValues(alpha: .85)),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'پیشنهاد تصادفی',
+                                    style: TextStyle(color: foreground.withValues(alpha: .85), fontSize: 11, fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Spacer(),
+                            Icon(Icons.format_quote_rounded, size: 25, color: foreground.withValues(alpha: .22)),
+                          ],
+                        ),
+                        const SizedBox(height: 13),
+                        Text(
+                          featuredNote!.title.isEmpty ? 'بدون عنوان' : featuredNote!.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.start,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                            height: 1.45,
+                            color: foreground,
+                            fontFamily: featuredNote!.themeFontFamily,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            width: 34,
+                            height: 3,
+                            decoration: BoxDecoration(
+                              color: foreground.withValues(alpha: .25),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
+              );
+            }),
           ),
         Padding(padding:const EdgeInsets.fromLTRB(20,8,20,18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           TextField(controller:search,decoration:InputDecoration(hintText:'جستجو در یادداشت‌ها...',prefixIcon:const Icon(Icons.search),suffixIcon:search.text.isEmpty?null:IconButton(onPressed:search.clear,icon:const Icon(Icons.close)),filled:true,fillColor:Colors.white,border:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide.none))),
