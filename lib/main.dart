@@ -66,6 +66,70 @@ String _notePlainText(String body) {
 }
 
 final ValueNotifier<String> appInterfaceFontFamily = ValueNotifier<String>('sans-serif');
+final ValueNotifier<String> appThemeName = ValueNotifier<String>('دودی');
+
+ThemeData _buildAppTheme(String preset, String fontFamily) {
+  final isWhite = preset == 'سفید';
+  final isBlack = preset == 'سیاه';
+  final isSilver = preset == 'نقره‌ای';
+  final background = isWhite
+      ? const Color(0xFFF9FAFB)
+      : isBlack
+          ? const Color(0xFF101114)
+          : isSilver
+              ? const Color(0xFFE1E4E8)
+              : const Color(0xFF292D32);
+  final surface = isWhite
+      ? Colors.white
+      : isBlack
+          ? const Color(0xFF1A1C20)
+          : isSilver
+              ? const Color(0xFFF0F2F5)
+              : const Color(0xFF363B41);
+  final foreground = (isBlack || preset == 'دودی')
+      ? const Color(0xFFF0F1F3)
+      : const Color(0xFF202327);
+  final primary = isWhite
+      ? const Color(0xFF41464D)
+      : isBlack
+          ? const Color(0xFFB8BEC7)
+          : isSilver
+              ? const Color(0xFF68717C)
+              : const Color(0xFFB7BEC7);
+  final appBarBackground = isWhite
+      ? const Color(0xFFF1F3F5)
+      : isBlack
+          ? const Color(0xFF08090B)
+          : isSilver
+              ? const Color(0xFFC8CDD4)
+              : const Color(0xFF171A1E);
+  return ThemeData(
+    useMaterial3: true,
+    fontFamily: fontFamily,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: primary,
+      brightness: (isBlack || preset == 'دودی') ? Brightness.dark : Brightness.light,
+    ).copyWith(
+      primary: primary,
+      onPrimary: (isBlack || preset == 'دودی') ? const Color(0xFF17191C) : Colors.white,
+      secondary: isSilver ? const Color(0xFF929BA6) : const Color(0xFF9DA3AA),
+      onSecondary: const Color(0xFF202327),
+      surface: surface,
+    ),
+    scaffoldBackgroundColor: background,
+    appBarTheme: AppBarTheme(
+      backgroundColor: appBarBackground,
+      foregroundColor: foreground,
+      elevation: 0,
+      iconTheme: IconThemeData(color: foreground),
+    ),
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      backgroundColor: primary,
+      foregroundColor: (isBlack || preset == 'دودی') ? const Color(0xFF17191C) : Colors.white,
+      elevation: 5,
+    ),
+  );
+}
 
 void main() => runApp(const NotebookApp());
 class NotebookApp extends StatelessWidget {
@@ -75,29 +139,7 @@ class NotebookApp extends StatelessWidget {
     valueListenable: appInterfaceFontFamily,
     builder: (context, interfaceFont, _) => MaterialApp(
     debugShowCheckedModeBanner: false, title: 'دفترچه اشتباهات ترید',
-    theme: ThemeData(
-      useMaterial3: true,
-      fontFamily: interfaceFont,
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF34383D)).copyWith(
-        primary: const Color(0xFF34383D),
-        onPrimary: const Color(0xFFF4F5F6),
-        secondary: const Color(0xFF9DA3AA),
-        onSecondary: const Color(0xFF202327),
-        surface: const Color(0xFFF7F8F9),
-      ),
-      scaffoldBackgroundColor: const Color(0xFFF0F1F3),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF17191C),
-        foregroundColor: Color(0xFFE5E7EA),
-        elevation: 0,
-        iconTheme: IconThemeData(color: Color(0xFFD4D7DB)),
-      ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: Color(0xFF34383D),
-        foregroundColor: Color(0xFFE5E7EA),
-        elevation: 5,
-      ),
-    ),
+    theme: _buildAppTheme(appThemeName.value, interfaceFont),
     localizationsDelegates: [...GlobalMaterialLocalizations.delegates, quill.FlutterQuillLocalizations.delegate],
     supportedLocales: const [Locale('fa'), Locale('en')],
     // Legacy Flutter-based dependencies still need this migration bridge.
@@ -194,6 +236,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       final loadedPinnedFolderIds = await repository.loadPinnedFolderIds();
       final loadedTextColorPalette = await repository.loadTextColorPalette();
       final loadedAppFontFamily = await repository.loadAppInterfaceFontFamily();
+      final loadedAppTheme = await repository.loadAppTheme();
       notes.addAll(loadedNotes);
       featuredNote = _randomNote(loadedNotes);
       themes.addAll(loadedThemes);
@@ -214,6 +257,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
         } catch (_) { /* An unavailable custom font must not block opening the notebook. */ }
       }
       appInterfaceFontFamily.value = customFonts.containsKey(loadedAppFontFamily) ? loadedAppFontFamily : 'sans-serif';
+      appThemeName.value = ['سفید', 'سیاه', 'دودی', 'نقره‌ای'].contains(loadedAppTheme) ? loadedAppTheme : 'دودی';
       if (themes.isEmpty) themes.addAll(defaultThemes);
       if (randomThemeNames.isEmpty) randomThemeNames.addAll(themes.map((theme) => theme.name));
       _randomizeNoteBackgrounds();
@@ -287,6 +331,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       initialRandomThemeNames:randomThemeNames.toList(),
       initialTextColorPalette:List<int>.of(textColorPalette),
       initialAppFontFamily:appInterfaceFontFamily.value,
+      initialAppThemeName:appThemeName.value,
       onAddCustomFont:() async {
         await addCustomFont();
         return customFonts.keys.toList();
@@ -298,11 +343,13 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
         randomThemeNames..clear()..addAll(result.randomThemeNames);
         textColorPalette..clear()..addAll(result.textColorPalette);
         appInterfaceFontFamily.value = result.appFontFamily;
+        appThemeName.value = result.appThemeName;
       });
       await persistThemes();
       await repository.saveRandomThemeNames(randomThemeNames.toList());
       await repository.saveTextColorPalette(textColorPalette);
       await repository.saveAppInterfaceFontFamily(result.appFontFamily);
+      await repository.saveAppTheme(result.appThemeName);
     }
   }
   Future<void> addCustomFont() async {
