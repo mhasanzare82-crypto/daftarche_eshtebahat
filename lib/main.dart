@@ -101,6 +101,7 @@ class _NotesPageState extends State<NotesPage> {
   bool loading=true;
   Note? featuredNote;
   final customFonts=<String, String>{};
+  final randomThemeNames=<String>{};
   static const defaultThemes=[NoteTheme('یاسی',0xFFEDE7F6),NoteTheme('آبی',0xFFE3F2FD),NoteTheme('سبز',0xFFE8F5E9),NoteTheme('صورتی',0xFFFCE4EC),NoteTheme('هلویی',0xFFFFEAD5)];
 
   @override
@@ -111,11 +112,13 @@ class _NotesPageState extends State<NotesPage> {
       final loadedThemes = await repository.loadThemes();
       final loadedFolders = await repository.loadFolders();
       final loadedFonts = await repository.loadCustomFonts();
+      final loadedRandomThemeNames = await repository.loadRandomThemeNames();
       notes.addAll(loadedNotes);
       featuredNote = _randomNote(loadedNotes);
       themes.addAll(loadedThemes);
       folders.addAll(loadedFolders);
       customFonts.addAll(loadedFonts);
+      randomThemeNames.addAll(loadedRandomThemeNames);
       for (final entry in customFonts.entries) {
         try {
           final file = File(entry.value);
@@ -127,6 +130,7 @@ class _NotesPageState extends State<NotesPage> {
         } catch (_) { /* An unavailable custom font must not block opening the notebook. */ }
       }
       if (themes.isEmpty) themes.addAll(defaultThemes);
+      if (randomThemeNames.isEmpty) randomThemeNames.addAll(themes.map((theme) => theme.name));
       if (mounted) setState(() => loading = false);
       await persistThemes();
     } catch (error, stackTrace) {
@@ -165,33 +169,34 @@ class _NotesPageState extends State<NotesPage> {
     await persist();
   }
   Future<void> manageThemes() async {
-    final result=await showDialog<List<NoteTheme>>(context:context,builder:(context)=>ThemeManagerDialog(
+    final result=await showDialog<ThemeManagerResult>(context:context,builder:(context)=>ThemeManagerDialog(
       initialThemes:List.of(themes),
       customFonts:customFonts.keys.toList(),
+      initialRandomThemeNames:randomThemeNames.toList(),
       onAddCustomFont:() async {
         await addCustomFont();
         return customFonts.keys.toList();
       },
     ));
     if(result!=null){
-      setState((){themes..clear()..addAll(result);});
+      setState((){themes..clear()..addAll(result.themes);randomThemeNames..clear()..addAll(result.randomThemeNames);});
       await persistThemes();
+      await repository.saveRandomThemeNames(randomThemeNames.toList());
     }
   }
   Future<void> addCustomFont() async {
-    final picked=await FilePicker.pickFiles(type:FileType.custom,allowedExtensions:['ttf','otf']);
+    final picked=await FilePicker.pickFiles(type:FileType.custom,allowedExtensions:['ttf','otf'],allowMultiple:true);
     if(picked.isEmpty)return;
-    final file=picked.first;
+    var added = 0;
+    final failures = <String>[];
+    for (final file in picked) {
     final filePath = file.path;
     if (filePath == null || filePath.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('مسیر فایل فونت قابل دسترسی نیست.')),
-        );
-      }
-      return;
+      failures.add(file.name);
+      continue;
     }
-    final bytes = await File(filePath).readAsBytes();
+    try {
+      final bytes = await File(filePath).readAsBytes();
     final parts=file.name.split('.');
     final original=parts.length>1?parts.sublist(0,parts.length-1).join('.'):file.name;
     final family = 'custom_${original.replaceAll(RegExp(r'[^A-Za-z0-9_]+'), '_')}_${DateTime.now().millisecondsSinceEpoch}';
@@ -205,12 +210,19 @@ class _NotesPageState extends State<NotesPage> {
       final loader=FontLoader(family)..addFont(Future.value(ByteData.sublistView(bytes)));
       await loader.load();
     } catch(e) {
-      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('بارگذاری این فونت ممکن نشد. فایل TTF یا OTF معتبر انتخاب کن.')));
-      return;
+      failures.add(file.name);
+      continue;
     }
     customFonts[family]=saved.path;
-    await repository.saveCustomFonts(customFonts);
-    if(mounted){setState((){});ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('فونت «$original» اضافه شد. اکنون نام آن را در بخش فونت تم انتخاب کن.')));}
+    added++;
+    } catch (error) { failures.add(file.name); }
+    }
+    if (added > 0) await repository.saveCustomFonts(customFonts);
+    if(mounted){
+      setState((){});
+      final message = failures.isEmpty ? '$added فونت با موفقیت اضافه شد.' : '$added فونت اضافه شد؛ ${failures.length} فایل ناموفق بود.';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(message)));
+    }
   }
   Note? _randomNote(List<Note> source) => source.isEmpty ? null : source[Random().nextInt(source.length)];
 
@@ -220,8 +232,12 @@ class _NotesPageState extends State<NotesPage> {
     list.sort((a,b)=>b.updated.compareTo(a.updated));return list;
   }
   Future<void> edit([Note? note]) async {
-    final selected=note==null?(themes.isEmpty?defaultThemes.first:themes[Random().nextInt(themes.length)]):NoteTheme('فعلی',note.themeColor,note.themeTextColor,note.themeFontFamily);
-    final result=await Navigator.push<Note>(context,MaterialPageRoute(builder:(_)=>EditorPage(note:note,themes:themes,customFonts:customFonts.keys.toList(),initialTheme:selected,initialFolderId:note?.folderId??selectedFolderId)));
+    final availableThemes = themes.where((theme) => randomThemeNames.contains(theme.name)).toList();
+    final themePool = availableThemes.isEmpty ? (themes.isEmpty ? defaultThemes : themes) : availableThemes;
+    final selected=note==null?themePool[Random().nextInt(themePool.length)]:NoteTheme('فعلی',note.themeColor,note.themeTextColor,note.themeFontFamily);
+    final selectedFont = note == null && customFonts.isNotEmpty ? customFonts.keys.elementAt(Random().nextInt(customFonts.length)) : selected.fontFamily;
+    final initialTheme = NoteTheme(selected.name, selected.backgroundColor, selected.textColor, selectedFont);
+    final result=await Navigator.push<Note>(context,MaterialPageRoute(builder:(_)=>EditorPage(note:note,themes:themes,customFonts:customFonts.keys.toList(),initialTheme:initialTheme,initialFolderId:note?.folderId??selectedFolderId)));
     if(result==null)return;
     setState(() { final i=notes.indexWhere((n)=>n.id==result.id); if(i<0){notes.add(result);}else{notes[i]=result;} if(featuredNote?.id==result.id)featuredNote=result; });
     await persist();
