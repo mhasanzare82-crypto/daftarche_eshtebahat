@@ -968,7 +968,10 @@ class _EditorPageState extends State<EditorPage> {
   String? folderId;
   static const marker = '__quill_note_v1__';
   static const builtInToolbarFonts = ['sans-serif','serif','monospace','sans-serif-condensed','sans-serif-light','sans-serif-medium','cursive'];
-  Map<String, String> get toolbarFontFamilies => {for (final family in {...builtInToolbarFonts, ...widget.customFonts, themeFontFamily}) family: family};
+  Map<String, String> get toolbarFontFamilies => {
+    for (final family in {...builtInToolbarFonts, ...widget.customFonts, themeFontFamily})
+      'نمونه یک فونت · $family': family,
+  };
 
   quill.Document _loadDocument(String? body, List<String> legacyImages) {
     if (body != null && body.startsWith(marker)) {
