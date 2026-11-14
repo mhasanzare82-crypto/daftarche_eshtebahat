@@ -91,7 +91,7 @@ class NotesPage extends StatefulWidget {
   @override
   State<NotesPage> createState() => _NotesPageState();
 }
-class _NotesPageState extends State<NotesPage> {
+class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
   final NotebookRepository repository = NotebookRepository();
   final notes=<Note>[];
   final themes=<NoteTheme>[];
@@ -107,7 +107,17 @@ class _NotesPageState extends State<NotesPage> {
   static const defaultThemes=[NoteTheme('یاسی',0xFFEDE7F6),NoteTheme('آبی',0xFFE3F2FD),NoteTheme('سبز',0xFFE8F5E9),NoteTheme('صورتی',0xFFFCE4EC),NoteTheme('هلویی',0xFFFFEAD5)];
 
   @override
-  void initState(){super.initState();search.addListener(()=>setState((){}));noteAudioPlayer.onPlayerComplete.listen((_){if(mounted)setState(()=>currentlyPlayingAudio=null);});load();}
+  void initState(){super.initState();WidgetsBinding.instance.addObserver(this);search.addListener(()=>setState((){}));noteAudioPlayer.onPlayerComplete.listen((_){if(mounted)setState(()=>currentlyPlayingAudio=null);});load();}
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refreshFeaturedNote();
+  }
+
+  void _refreshFeaturedNote() {
+    if (!mounted || loading) return;
+    setState(() => featuredNote = _randomNote(notes, excludeId: featuredNote?.id));
+  }
   Future<void> load() async {
     try {
       final loadedNotes = await repository.loadNotes();
@@ -226,7 +236,12 @@ class _NotesPageState extends State<NotesPage> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(message)));
     }
   }
-  Note? _randomNote(List<Note> source) => source.isEmpty ? null : source[Random().nextInt(source.length)];
+  Note? _randomNote(List<Note> source, {String? excludeId}) {
+    if (source.isEmpty) return null;
+    final candidates = excludeId == null ? source : source.where((note) => note.id != excludeId).toList();
+    final pool = candidates.isEmpty ? source : candidates;
+    return pool[Random().nextInt(pool.length)];
+  }
 
   List<Note> get filtered {
     final q=search.text.trim().toLowerCase();
@@ -240,9 +255,10 @@ class _NotesPageState extends State<NotesPage> {
     final selectedFont = note == null && customFonts.isNotEmpty ? customFonts.keys.elementAt(Random().nextInt(customFonts.length)) : selected.fontFamily;
     final initialTheme = NoteTheme(selected.name, selected.backgroundColor, selected.textColor, selectedFont);
     final result=await Navigator.push<Note>(context,MaterialPageRoute(builder:(_)=>EditorPage(note:note,themes:themes,customFonts:customFonts.keys.toList(),initialTheme:initialTheme,initialFolderId:note?.folderId??selectedFolderId)));
-    if(result==null)return;
+    if(result==null){_refreshFeaturedNote();return;}
     setState(() { final i=notes.indexWhere((n)=>n.id==result.id); if(i<0){notes.add(result);}else{notes[i]=result;} if(featuredNote?.id==result.id)featuredNote=result; });
     await persist();
+    _refreshFeaturedNote();
   }
   Future<void> remove(Note n) async {
     final yes=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(
@@ -682,7 +698,7 @@ class _NotesPageState extends State<NotesPage> {
 
   String date(DateTime d) => '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
   @override
-  void dispose(){search.dispose();noteAudioPlayer.dispose();super.dispose();}
+  void dispose(){WidgetsBinding.instance.removeObserver(this);search.dispose();noteAudioPlayer.dispose();super.dispose();}
   @override
   Widget build(BuildContext context){
     final items=filtered;
