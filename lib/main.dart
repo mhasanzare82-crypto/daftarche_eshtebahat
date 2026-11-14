@@ -104,6 +104,7 @@ class NotebookApp extends StatelessWidget {
     // ignore: deprecated_member_use
     builder: (context, child) => MaterialUiCompatibilityBridge(child: child!),
     home: const NotesPage(),
+    ),
   );
 }
 
@@ -202,7 +203,6 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       pinnedNoteIds.addAll(loadedPinnedNoteIds);
       pinnedFolderIds.addAll(loadedPinnedFolderIds);
       textColorPalette.addAll(loadedTextColorPalette);
-      appInterfaceFontFamily.value = loadedAppFontFamily;
       for (final entry in customFonts.entries) {
         try {
           final file = File(entry.value);
@@ -213,6 +213,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
           }
         } catch (_) { /* An unavailable custom font must not block opening the notebook. */ }
       }
+      appInterfaceFontFamily.value = customFonts.containsKey(loadedAppFontFamily) ? loadedAppFontFamily : 'sans-serif';
       if (themes.isEmpty) themes.addAll(defaultThemes);
       if (randomThemeNames.isEmpty) randomThemeNames.addAll(themes.map((theme) => theme.name));
       _randomizeNoteBackgrounds();
