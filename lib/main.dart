@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
@@ -402,7 +403,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
         ? availableFonts[Random().nextInt(availableFonts.length)]
         : selected.fontFamily;
     final initialTheme = NoteTheme(selected.name, selected.backgroundColor, selected.textColor, selectedFont);
-    final result=await Navigator.push<Note>(context,MaterialPageRoute(builder:(_)=>EditorPage(note:note,themes:themes,customFonts:customFonts.keys.toList(),initialTheme:initialTheme,initialFolderId:note?.folderId??selectedFolderId,backgroundColorOverride:note == null ? null : _backgroundColorFor(note))));
+    final result=await Navigator.push<Note>(context,MaterialPageRoute(builder:(_)=>EditorPage(note:note,themes:themes,customFonts:customFonts.keys.toList(),initialTheme:initialTheme,initialFolderId:note?.folderId??selectedFolderId,backgroundColorOverride:note == null ? null : _backgroundColorFor(note),onAutoSave:(draft) async { if(!mounted)return; setState(() { final i=notes.indexWhere((n)=>n.id==draft.id); if(i<0){notes.add(draft);}else{notes[i]=draft;} }); await persist(); })));
     if(result==null){_refreshFeaturedNote();return;}
     setState(() { final i=notes.indexWhere((n)=>n.id==result.id); if(i<0){notes.add(result);}else{notes[i]=result;} if(featuredNote?.id==result.id)featuredNote=result; });
     await persist();
@@ -497,8 +498,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
             relationships.add('<Relationship Id="$rid" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/$name"/>');
             runs.write(_docxImageDrawing(rid));
           }
-        }
-      }
+        }      }
       if (runs.isNotEmpty) flushParagraph();
       paragraphs.add('<w:p/>');
     }
@@ -997,8 +997,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
                         ),
                       )],
                     ),
-                  ]),
-                )),
+                  ]),                )),
               ],
             ),
           ),
@@ -1046,19 +1045,22 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
 
 class EditorPage extends StatefulWidget {
   final Note? note;
+  final Future<void> Function(Note note) onAutoSave;
   final List<NoteTheme> themes;
   final List<String> customFonts;
   final NoteTheme initialTheme;
   final String? initialFolderId;
   final int? backgroundColorOverride;
-  const EditorPage({super.key,this.note,required this.themes,required this.customFonts,required this.initialTheme, this.initialFolderId, this.backgroundColorOverride});
+  const EditorPage({super.key,this.note,required this.themes,required this.customFonts,required this.initialTheme,required this.onAutoSave, this.initialFolderId, this.backgroundColorOverride});
   @override
   State<EditorPage> createState()=>_EditorPageState();
 }
 
-class _EditorPageState extends State<EditorPage> {
+class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
   late final TextEditingController title;
   late final quill.QuillController controller;
+  late final String draftId;
+  Timer? _autoSaveTimer;
   final AudioRecorder recorder = AudioRecorder();
   final AudioPlayer audioPlayer = AudioPlayer();
   final List<String> audioPaths = [];
@@ -1103,6 +1105,8 @@ class _EditorPageState extends State<EditorPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    draftId = widget.note?.id ?? DateTime.now().microsecondsSinceEpoch.toString();
     title = TextEditingController(text: widget.note?.title ?? '');
     final doc = _loadDocument(widget.note?.body, widget.note?.images ?? const []);
     audioPlayer.onPlayerComplete.listen((_) { if (mounted) setState(() => currentlyPlayingEditorAudio = null); });
@@ -1110,6 +1114,11 @@ class _EditorPageState extends State<EditorPage> {
       document: doc,
       selection: const TextSelection.collapsed(offset: 0),
     );
+    if (widget.note == null) {
+      controller.formatSelection(quill.Attribute.fromKeyValue('size', '20'));
+    }
+    title.addListener(_scheduleAutoSave);
+    controller.addListener(_scheduleAutoSave);
     themeColor = widget.backgroundColorOverride ?? widget.note?.themeColor ?? widget.initialTheme.backgroundColor;
     themeTextColor = widget.note?.themeTextColor ?? widget.initialTheme.textColor;
     themeFontFamily = widget.note?.themeFontFamily ?? widget.initialTheme.fontFamily;
@@ -1203,7 +1212,7 @@ class _EditorPageState extends State<EditorPage> {
   }
 
   Future<void> setNumericFontSize() async {
-    final input=TextEditingController(text:'16');
+    final input=TextEditingController(text:'20');
     final value=await showDialog<double>(context:context,builder:(ctx)=>Directionality(textDirection:TextDirection.rtl,child:AlertDialog(
       title:const Text('اندازه متن'),
       content:TextField(controller:input,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'اندازه بر حسب پوینت',hintText:'مثلاً 16')),
@@ -1213,11 +1222,11 @@ class _EditorPageState extends State<EditorPage> {
     if(value!=null){controller.formatSelection(quill.Attribute.fromKeyValue('size',value.toString()));}
   }
 
-  void save() {
+  Note? _buildNote() {
     final delta = controller.document.toDelta().toJson();
     final plain = controller.document.toPlainText().trim();
     final hasContent = delta.any((op) => op['insert'] is Map);
-    if (title.text.trim().isEmpty && plain.isEmpty && !hasContent) { Navigator.pop(context); return; }
+    if (widget.note == null && title.text.trim().isEmpty && plain.isEmpty && !hasContent && audioPaths.isEmpty) return null;
     final imagePaths = <String>[];
     for (final op in delta) {
       if (op['insert'] is Map) {
@@ -1225,15 +1234,45 @@ class _EditorPageState extends State<EditorPage> {
         if (image is String && !image.startsWith('http')) imagePaths.add(image);
       }
     }
-    Navigator.pop(context, Note(
-      widget.note?.id ?? DateTime.now().microsecondsSinceEpoch.toString(),
-      title.text.trim(), marker + jsonEncode(delta), DateTime.now(), imagePaths,
+    return Note(
+      draftId, title.text.trim(), marker + jsonEncode(delta), DateTime.now(), imagePaths,
       widget.note?.themeColor ?? themeColor, themeTextColor, themeFontFamily, folderId, List.of(audioPaths),
-    ));
+    );
+  }
+
+  void _scheduleAutoSave() {
+    _autoSaveTimer?.cancel();
+    _autoSaveTimer = Timer(const Duration(milliseconds: 500), _persistDraft);
+  }
+
+  Future<void> _persistDraft() async {
+    _autoSaveTimer?.cancel();
+    final draft = _buildNote();
+    if (draft != null) await widget.onAutoSave(draft);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+      _persistDraft();
+    }
+  }
+
+  Future<void> save() async {
+    _autoSaveTimer?.cancel();
+    final note = _buildNote();
+    if (note == null) { Navigator.pop(context); return; }
+    await widget.onAutoSave(note);
+    if (mounted) Navigator.pop(context, note);
   }
 
   @override
   void dispose() {
+    _autoSaveTimer?.cancel();
+    _persistDraft();
+    WidgetsBinding.instance.removeObserver(this);
+    title.removeListener(_scheduleAutoSave);
+    controller.removeListener(_scheduleAutoSave);
     title.dispose();
     recorder.dispose();
     audioPlayer.dispose();
