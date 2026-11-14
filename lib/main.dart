@@ -252,7 +252,11 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
     final availableThemes = themes.where((theme) => randomThemeNames.contains(theme.name)).toList();
     final themePool = availableThemes.isEmpty ? (themes.isEmpty ? defaultThemes : themes) : availableThemes;
     final selected=note==null?themePool[Random().nextInt(themePool.length)]:NoteTheme('فعلی',note.themeColor,note.themeTextColor,note.themeFontFamily);
-    final selectedFont = note == null && customFonts.isNotEmpty ? customFonts.keys.elementAt(Random().nextInt(customFonts.length)) : selected.fontFamily;
+    const builtInFonts = ['sans-serif','serif','monospace','sans-serif-condensed','sans-serif-light','sans-serif-medium','cursive'];
+    final availableFonts = {...builtInFonts, ...customFonts.keys}.toList();
+    final selectedFont = note == null
+        ? availableFonts[Random().nextInt(availableFonts.length)]
+        : selected.fontFamily;
     final initialTheme = NoteTheme(selected.name, selected.backgroundColor, selected.textColor, selectedFont);
     final result=await Navigator.push<Note>(context,MaterialPageRoute(builder:(_)=>EditorPage(note:note,themes:themes,customFonts:customFonts.keys.toList(),initialTheme:initialTheme,initialFolderId:note?.folderId??selectedFolderId)));
     if(result==null){_refreshFeaturedNote();return;}
