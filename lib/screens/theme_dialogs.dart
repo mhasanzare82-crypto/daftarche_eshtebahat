@@ -5,7 +5,8 @@ class ThemeManagerResult {
   final List<NoteTheme> themes;
   final List<String> randomThemeNames;
   final List<int> textColorPalette;
-  const ThemeManagerResult(this.themes, this.randomThemeNames, this.textColorPalette);
+  final String appFontFamily;
+  const ThemeManagerResult(this.themes, this.randomThemeNames, this.textColorPalette, this.appFontFamily);
 }
 
 class ThemeManagerDialog extends StatefulWidget {
@@ -13,6 +14,7 @@ class ThemeManagerDialog extends StatefulWidget {
   final List<String> customFonts;
   final List<String> initialRandomThemeNames;
   final List<int> initialTextColorPalette;
+  final String initialAppFontFamily;
   final Future<List<String>> Function()? onAddCustomFont;
   const ThemeManagerDialog({
     super.key,
@@ -20,6 +22,7 @@ class ThemeManagerDialog extends StatefulWidget {
     this.customFonts = const [],
     this.initialRandomThemeNames = const [],
     this.initialTextColorPalette = const [],
+    this.initialAppFontFamily = 'sans-serif',
     this.onAddCustomFont,
   });
   @override
@@ -30,6 +33,7 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
   late List<NoteTheme> palette;
   late List<String> fonts;
   late List<int> textColorPalette;
+  late String appFontFamily;
   double hue = 220, saturation = .06, brightness = .78;
   bool addingFonts = false;
   static const builtInFonts = ['sans-serif'];
@@ -40,6 +44,7 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
     palette = [...widget.initialThemes];
     fonts = {...builtInFonts, ...widget.customFonts}.toList();
     textColorPalette = [...widget.initialTextColorPalette];
+    appFontFamily = widget.initialAppFontFamily;
   }
 
   Color get selectedColor => HSVColor.fromAHSV(1, hue, saturation, brightness).toColor();
@@ -107,6 +112,22 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
               avatar: const Icon(Icons.text_fields, size: 16),
               label: Text(family, style: TextStyle(fontFamily: family, fontSize: 11)),
             )).toList()),
+            const SizedBox(height: 12),
+            const Divider(),
+            const SizedBox(height: 12),
+            const Text('فونت نوشته‌های خود برنامه', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            const SizedBox(height: 6),
+            const Text('این گزینه فونت منوها، دکمه‌ها، عنوان‌ها و نوشته‌های محیط برنامه را تغییر می‌دهد و روی فونت داخل یادداشت‌ها اثری ندارد.', style: TextStyle(fontSize: 12, color: Colors.black54)),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              value: fonts.contains(appFontFamily) ? appFontFamily : 'sans-serif',
+              decoration: const InputDecoration(labelText: 'فونت رابط کاربری', border: OutlineInputBorder()),
+              items: fonts.map((family) => DropdownMenuItem<String>(
+                value: family,
+                child: Text(family, style: TextStyle(fontFamily: family)),
+              )).toList(),
+              onChanged: (value) { if (value != null) setState(() => appFontFamily = value); },
+            ),
             const SizedBox(height: 24),
             const Divider(),
             const SizedBox(height: 12),
@@ -188,7 +209,7 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
             FilledButton.icon(
               onPressed: () {
                 final names = palette.map((item) => item.name).toList();
-                Navigator.pop(context, ThemeManagerResult([...palette], names, [...textColorPalette]));
+                Navigator.pop(context, ThemeManagerResult([...palette], names, [...textColorPalette], appFontFamily));
               },
               icon: const Icon(Icons.save_outlined),
               label: const Text('ذخیره تنظیمات'),
