@@ -14,6 +14,7 @@ class NotebookRepository {
   static const _pinnedFoldersKey = 'notebook_pinned_folder_ids';
   static const _textColorPaletteKey = 'notebook_text_color_palette';
   static const _appInterfaceFontKey = 'notebook_app_interface_font_family';
+  static const _appThemeKey = 'notebook_app_theme';
 
   Future<List<Note>> loadNotes() async {
     final prefs = await SharedPreferences.getInstance();
@@ -75,6 +76,18 @@ class NotebookRepository {
     final prefs = await SharedPreferences.getInstance();
     if (!await prefs.setString(_appInterfaceFontKey, value)) {
       throw StateError('Unable to persist app interface font');
+    }
+  }
+
+  Future<String> loadAppTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_appThemeKey) ?? 'دودی';
+  }
+
+  Future<void> saveAppTheme(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!await prefs.setString(_appThemeKey, value)) {
+      throw StateError('Unable to persist app theme');
     }
   }
 
