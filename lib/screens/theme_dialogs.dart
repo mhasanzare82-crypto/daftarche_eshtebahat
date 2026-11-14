@@ -1,20 +1,28 @@
 import 'package:material_ui/material_ui.dart';
 import '../models/note.dart';
 
+class ThemeManagerResult {
+  final List<NoteTheme> themes;
+  final List<String> randomThemeNames;
+  const ThemeManagerResult(this.themes, this.randomThemeNames);
+}
+
 class ThemeManagerDialog extends StatefulWidget {
   final List<NoteTheme> initialThemes;
   final List<String> customFonts;
+  final List<String> initialRandomThemeNames;
   final Future<List<String>> Function()? onAddCustomFont;
-  const ThemeManagerDialog({super.key, required this.initialThemes, this.customFonts = const [], this.onAddCustomFont});
+  const ThemeManagerDialog({super.key, required this.initialThemes, this.customFonts = const [], this.initialRandomThemeNames = const [], this.onAddCustomFont});
   @override
   State<ThemeManagerDialog> createState() => _ThemeManagerDialogState();
 }
 class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
   late List<NoteTheme> items;
   late List<String> availableFonts;
+  late Set<String> randomThemeNames;
   bool addingFont = false;
   @override
-  void initState() { super.initState(); items = List.of(widget.initialThemes); availableFonts = List.of(widget.customFonts); }
+  void initState() { super.initState(); items = List.of(widget.initialThemes); availableFonts = List.of(widget.customFonts); randomThemeNames = widget.initialRandomThemeNames.isEmpty ? items.map((e) => e.name).toSet() : widget.initialRandomThemeNames.toSet(); }
   Future<void> addFont() async {
     if (widget.onAddCustomFont == null || addingFont) return;
     setState(() => addingFont = true);
@@ -59,19 +67,23 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
               ? const Text('هنوز تمی نساخته‌ای.')
               : ListView(
                   shrinkWrap: true,
-                  children: items.map((theme) => Card(
+                  children: [
+                    const Padding(padding: EdgeInsets.fromLTRB(8, 8, 8, 4), child: Text('برای انتخاب تصادفی هنگام ساخت یادداشت، تم‌های دلخواهت را علامت بزن.')),
+                    ...items.map((theme) => Card(
                     color: Color(theme.backgroundColor),
                     child: ListTile(
                       title: Text(theme.name, style: TextStyle(color: Color(theme.textColor), fontFamily: theme.fontFamily)),
                       subtitle: Text('پس‌زمینه، رنگ متن و فونت', style: TextStyle(color: Color(theme.textColor).withValues(alpha: .75))),
                       leading: CircleAvatar(backgroundColor: Color(theme.backgroundColor), child: Icon(Icons.text_fields, color: Color(theme.textColor))),
                       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Checkbox(value: randomThemeNames.contains(theme.name), onChanged: (value) => setState(() { if (value == true) { randomThemeNames.add(theme.name); } else { randomThemeNames.remove(theme.name); } })),
                         IconButton(tooltip: 'ویرایش', onPressed: () => editTheme(theme), icon: const Icon(Icons.edit_outlined)),
-                        IconButton(tooltip: 'حذف', onPressed: () => deleteTheme(theme), icon: const Icon(Icons.delete_outline)),
+                        IconButton(tooltip: 'حذف', onPressed: () { setState(() => randomThemeNames.remove(theme.name)); deleteTheme(theme); }, icon: const Icon(Icons.delete_outline)),
                       ]),
                       onTap: () => editTheme(theme),
                     ),
-                  )).toList(),
+                  )),
+                  ],
                 ),
         ),
         actions: [
@@ -84,7 +96,7 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
           ),
           TextButton.icon(onPressed: () => editTheme(), icon: const Icon(Icons.add), label: const Text('ساخت تم')),
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('انصراف')),
-          FilledButton(onPressed: () => Navigator.pop(context, items), child: const Text('ذخیره')),
+          FilledButton(onPressed: () => Navigator.pop(context, ThemeManagerResult(items, randomThemeNames.toList())), child: const Text('ذخیره')),
         ],
       ),
     );
