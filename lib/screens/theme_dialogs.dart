@@ -120,7 +120,7 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
             const Text('این گزینه فونت منوها، دکمه‌ها، عنوان‌ها و نوشته‌های محیط برنامه را تغییر می‌دهد و روی فونت داخل یادداشت‌ها اثری ندارد.', style: TextStyle(fontSize: 12, color: Colors.black54)),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              value: fonts.contains(appFontFamily) ? appFontFamily : 'sans-serif',
+              initialValue: fonts.contains(appFontFamily) ? appFontFamily : 'sans-serif',
               decoration: const InputDecoration(labelText: 'فونت رابط کاربری', border: OutlineInputBorder()),
               items: fonts.map((family) => DropdownMenuItem<String>(
                 value: family,
