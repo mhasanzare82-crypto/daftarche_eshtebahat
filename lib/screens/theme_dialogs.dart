@@ -13,269 +13,62 @@ class ThemeManagerDialog extends StatefulWidget {
   final List<String> initialRandomThemeNames;
   final Future<List<String>> Function()? onAddCustomFont;
   const ThemeManagerDialog({super.key, required this.initialThemes, this.customFonts = const [], this.initialRandomThemeNames = const [], this.onAddCustomFont});
-  @override
-  State<ThemeManagerDialog> createState() => _ThemeManagerDialogState();
+  @override State<ThemeManagerDialog> createState() => _ThemeManagerDialogState();
 }
+
 class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
-  late List<NoteTheme> items;
-  late List<String> availableFonts;
-  late Set<String> randomThemeNames;
-  bool addingFont = false;
-  @override
-  void initState() { super.initState(); items = List.of(widget.initialThemes); availableFonts = List.of(widget.customFonts); randomThemeNames = widget.initialRandomThemeNames.isEmpty ? items.map((e) => e.name).toSet() : widget.initialRandomThemeNames.toSet(); }
-  Future<void> addFont() async {
-    if (widget.onAddCustomFont == null || addingFont) return;
-    setState(() => addingFont = true);
-    try {
-      final updated = await widget.onAddCustomFont!();
-      if (mounted) setState(() => availableFonts = List.of(updated));
-    } finally {
-      if (mounted) setState(() => addingFont = false);
-    }
+  late List<NoteTheme> palette;
+  late List<String> fonts;
+  double hue = 265, saturation = .28, brightness = .94;
+  bool addingFonts = false;
+  static const builtInFonts = ['sans-serif','serif','monospace','sans-serif-condensed','sans-serif-light','sans-serif-medium','cursive'];
+  @override void initState() { super.initState(); palette = List.of(widget.initialThemes); fonts = [...builtInFonts, ...widget.customFonts].toSet().toList(); }
+  Color get selectedColor => HSVColor.fromAHSV(1, hue, saturation, brightness).toColor();
+  Color readableText(Color c) => c.computeLuminance() > .42 ? const Color(0xFF211D27) : Colors.white;
+  Future<void> addFonts() async {
+    if (widget.onAddCustomFont == null || addingFonts) return;
+    setState(() => addingFonts = true);
+    try { final updated = await widget.onAddCustomFont!(); if (mounted) setState(() => fonts = [...builtInFonts, ...updated].toSet().toList()); }
+    finally { if (mounted) setState(() => addingFonts = false); }
   }
-  Future<void> editTheme([NoteTheme? old]) async {
-    final result = await showDialog<NoteTheme>(context: context, builder: (_) => ThemeEditorDialog(theme: old, customFonts: availableFonts));
-    if (result == null) return;
-    setState(() {
-      if (old == null) { items.add(result); }
-      else { final index = items.indexOf(old); if (index >= 0) items[index] = result; }
-    });
+  void addSelectedColor() {
+    final color = selectedColor; final value = color.toARGB32();
+    if (palette.any((item) => item.backgroundColor == value)) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('این رنگ قبلاً اضافه شده است.'))); return; }
+    setState(() => palette.add(NoteTheme('رنگ ${palette.length + 1}', value, readableText(color).toARGB32(), 'sans-serif')));
   }
-  Future<void> deleteTheme(NoteTheme theme) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('حذف تم؟'),
-        content: Text('تم «${theme.name}» حذف شود؟'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('انصراف')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('حذف')),
-        ],
-      ),
-    );
-    if (confirmed == true) setState(() => items.remove(theme));
-  }
-  @override
-  Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: AlertDialog(
-        title: const Text('مدیریت تم‌ها'),
-        content: SizedBox(
-          width: 420,
-          child: items.isEmpty
-              ? const Text('هنوز تمی نساخته‌ای.')
-              : ListView(
-                  shrinkWrap: true,
-                  children: [
-                    const Padding(padding: EdgeInsets.fromLTRB(8, 8, 8, 4), child: Text('برای انتخاب تصادفی هنگام ساخت یادداشت، تم‌های دلخواهت را علامت بزن.')),
-                    ...items.map((theme) => Card(
-                      color: Color(theme.backgroundColor),
-                      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-                      clipBehavior: Clip.antiAlias,
-                      child: InkWell(
-                        onTap: () => editTheme(theme),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 18,
-                                backgroundColor: Color(theme.backgroundColor),
-                                child: Icon(Icons.text_fields, size: 19, color: Color(theme.textColor)),
-                              ),
-                              const SizedBox(width: 9),
-                              Expanded(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      theme.name,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      textAlign: TextAlign.right,
-                                      style: TextStyle(color: Color(theme.textColor), fontFamily: theme.fontFamily, fontWeight: FontWeight.w600, fontSize: 14),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'پیش‌نمایش رنگ و فونت',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      textAlign: TextAlign.right,
-                                      style: TextStyle(color: Color(theme.textColor).withValues(alpha: .72), fontSize: 11),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Checkbox(
-                                visualDensity: VisualDensity.compact,
-                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                value: randomThemeNames.contains(theme.name),
-                                onChanged: (value) => setState(() {
-                                  if (value == true) {
-                                    randomThemeNames.add(theme.name);
-                                  } else {
-                                    randomThemeNames.remove(theme.name);
-                                  }
-                                }),
-                              ),
-                              IconButton(
-                                visualDensity: VisualDensity.compact,
-                                constraints: const BoxConstraints.tightFor(width: 34, height: 34),
-                                padding: EdgeInsets.zero,
-                                tooltip: 'ویرایش',
-                                onPressed: () => editTheme(theme),
-                                icon: const Icon(Icons.edit_outlined, size: 19),
-                              ),
-                              IconButton(
-                                visualDensity: VisualDensity.compact,
-                                constraints: const BoxConstraints.tightFor(width: 34, height: 34),
-                                padding: EdgeInsets.zero,
-                                tooltip: 'حذف',
-                                onPressed: () {
-                                  setState(() => randomThemeNames.remove(theme.name));
-                                  deleteTheme(theme);
-                                },
-                                icon: const Icon(Icons.delete_outline, size: 19),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    )),
-                  ],
-                ),
-        ),
-        actions: [
-          TextButton.icon(
-            onPressed: addingFont ? null : addFont,
-            icon: addingFont
-                ? const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2))
-                : const Icon(Icons.upload_file_outlined),
-            label: Text(addingFont ? 'در حال افزودن...' : 'افزودن فونت'),
-          ),
-          TextButton.icon(onPressed: () => editTheme(), icon: const Icon(Icons.add), label: const Text('ساخت تم')),
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('انصراف')),
-          FilledButton(onPressed: () => Navigator.pop(context, ThemeManagerResult(items, randomThemeNames.toList())), child: const Text('ذخیره')),
-        ],
-      ),
-    );
-  }
-}
-
-class ThemeEditorDialog extends StatefulWidget{
-  final NoteTheme? theme;
-  final List<String> customFonts;
-  const ThemeEditorDialog({super.key,this.theme,this.customFonts=const []});
-  @override
-  State<ThemeEditorDialog> createState()=>_ThemeEditorDialogState();
-}
-class _ThemeEditorDialogState extends State<ThemeEditorDialog>{
-  late final TextEditingController name,font;
-  late int background,textColor;
-  static const commonFonts=['sans-serif','serif','monospace','sans-serif-condensed','sans-serif-light','sans-serif-medium','cursive'];
-  @override
-  void initState(){
-    super.initState();
-    final t=widget.theme;
-    name=TextEditingController(text:t?.name??'');
-    font=TextEditingController(text:t?.fontFamily??'sans-serif');
-    background=t?.backgroundColor??0xFFEDE7F6;
-    textColor=t?.textColor??0xFF16131C;
-  }
-  @override
-  void dispose(){name.dispose();font.dispose();super.dispose();}
-  bool editingBackground = true;
-
-  Widget _colorControls() {
-    final current = HSVColor.fromColor(Color(editingBackground ? background : textColor));
-    void update(HSVColor next) {
-      setState(() {
-        if (editingBackground) {
-          background = next.toColor().toARGB32();
-        } else {
-          textColor = next.toColor().toARGB32();
-        }
-      });
-    }
-    return Column(
-      children: [
-        Slider(
-          value: current.hue,
-          min: 0,
-          max: 360,
-          onChanged: (value) => update(current.withHue(value)),
-        ),
-        Slider(
-          value: current.saturation,
-          min: 0,
-          max: 1,
-          onChanged: (value) => update(current.withSaturation(value)),
-        ),
-        Slider(
-          value: current.value,
-          min: 0,
-          max: 1,
-          onChanged: (value) => update(current.withValue(value)),
-        ),
-      ],
-    );
-  }
-
-  Widget _colorPreview(int color, bool isBackground) {
-    final selected = editingBackground == isBackground;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => editingBackground = isBackground),
-        child: Container(
-          height: 52,
-          decoration: BoxDecoration(
-            color: Color(color),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: selected ? Theme.of(context).colorScheme.primary : Colors.black26,
-              width: selected ? 3 : 1,
-            ),
-          ),
-          child: selected
-              ? Icon(Icons.check, color: Color(color).computeLuminance() > .5 ? Colors.black : Colors.white)
-              : null,
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context)=>Directionality(textDirection:TextDirection.rtl,child:AlertDialog(
-    title:Text(widget.theme==null?'ساخت تم جدید':'ویرایش تم'),
-    content:SingleChildScrollView(child:SizedBox(width:420,child:Column(
-      mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.start,children:[
-        TextField(controller:name,maxLength:24,decoration:const InputDecoration(labelText:'نام دلخواه تم',hintText:'مثلاً شب آرام')),
-        const SizedBox(height:12),
-        Row(
-          children: [
-            _colorPreview(background, true),
-            const SizedBox(width: 12),
-            _colorPreview(textColor, false),
-          ],
-        ),
+  @override Widget build(BuildContext context) => Directionality(textDirection: TextDirection.rtl, child: Dialog(
+    insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 20),
+    child: SizedBox(width: 520, height: MediaQuery.sizeOf(context).height * .86, child: Column(children: [
+      Padding(padding: const EdgeInsets.fromLTRB(20,16,12,12), child: Row(children: [const Expanded(child: Text('مدیریت تم‌ها', style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold))), IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close))])),
+      const Divider(height: 1),
+      Expanded(child: ListView(padding: const EdgeInsets.all(16), children: [
+        _sectionTitle('۱. افزودن فونت‌ها', Icons.font_download_outlined),
+        const SizedBox(height: 6),
+        const Text('چند فایل فونت TTF یا OTF را هم‌زمان انتخاب کن؛ همه به فهرست فونت‌های قابل استفاده اضافه می‌شوند.', style: TextStyle(fontSize: 12, color: Colors.black54)),
+        const SizedBox(height: 10),
+        SizedBox(width: double.infinity, child: OutlinedButton.icon(onPressed: addingFonts ? null : addFonts, icon: addingFonts ? const SizedBox(width:18,height:18,child:CircularProgressIndicator(strokeWidth:2)) : const Icon(Icons.upload_file_outlined), label: Text(addingFonts ? 'در حال افزودن فونت‌ها...' : 'انتخاب گروهی فونت‌ها'))),
+        const SizedBox(height: 8),
+        Wrap(spacing: 7, runSpacing: 7, children: fonts.map((family) => Chip(avatar: const Icon(Icons.text_fields,size:16), label: Text(family, style: TextStyle(fontFamily: family,fontSize:11)))).toList()),
+        const SizedBox(height: 24), const Divider(), const SizedBox(height: 12),
+        _sectionTitle('۲. انتخاب رنگ پس‌زمینه', Icons.palette_outlined),
+        const SizedBox(height: 8),
+        const Text('سه اسلایدر را تنظیم کن. سپس روی کادر پیش‌نمایش بزن تا رنگ به پالت رنگ‌های برنامه اضافه شود.', style: TextStyle(fontSize: 12,color:Colors.black54)),
         const SizedBox(height: 12),
-        _colorControls(),
-        const SizedBox(height:16),const Text('۳. فونت دلخواه'),
-        TextField(controller:font,onChanged:(_)=>setState((){}),decoration:const InputDecoration(labelText:'نام فونت دستگاه یا فونت برنامه',hintText:'مثلاً sans-serif')),
-        const Text('برای نمایش دقیق، فونت باید روی دستگاه موجود یا به برنامه اضافه شده باشد.',style:TextStyle(fontSize:11,color:Colors.black54)),
-        const SizedBox(height:6),
-        Wrap(spacing:6,children:[...commonFonts,...widget.customFonts].map((f)=>ActionChip(label:Text(f,style:TextStyle(fontFamily:f,fontSize:11)),onPressed:()=>setState(()=>font.text=f))).toList()),
-        const SizedBox(height:16),const Text('پیش‌نمایش'),
-        Container(width:double.infinity,padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:Color(background),borderRadius:BorderRadius.circular(12)),child:Text('یادداشت نمونه؛ این متن با فونت و رنگ انتخابی نمایش داده می‌شود.',style:TextStyle(color:Color(textColor),fontFamily:font.text.trim().isEmpty?'sans-serif':font.text.trim(),fontSize:16))),
-      ],
-    ))),
-    actions:[
-      TextButton(onPressed:()=>Navigator.pop(context),child:const Text('انصراف')),
-      FilledButton(onPressed:()=>Navigator.pop(context,NoteTheme(name.text.trim().isEmpty?'تم بدون نام':name.text.trim(),background,textColor,font.text.trim().isEmpty?'sans-serif':font.text.trim())),child:const Text('ذخیره تم')),
-    ],
+        _sliderRow('ته‌رنگ', hue, 0, 360, (v) => setState(() => hue=v), hue.round().toString()),
+        _sliderRow('اشباع', saturation, 0, 1, (v) => setState(() => saturation=v), '${(saturation*100).round()}٪'),
+        _sliderRow('روشنایی', brightness, 0, 1, (v) => setState(() => brightness=v), '${(brightness*100).round()}٪'),
+        const SizedBox(height: 10),
+        Material(color:selectedColor,borderRadius:BorderRadius.circular(14),child:InkWell(borderRadius:BorderRadius.circular(14),onTap:addSelectedColor,child:SizedBox(height:76,child:Center(child:Row(mainAxisSize:MainAxisSize.min,children:[Icon(Icons.add_circle_outline,color:readableText(selectedColor),size:22),const SizedBox(width:8),Text('افزودن این رنگ به پالت',style:TextStyle(color:readableText(selectedColor),fontWeight:FontWeight.bold))]))))),
+        const SizedBox(height: 18),
+        Row(children:[Expanded(child:Text('رنگ‌های قابل انتخاب (${palette.length})',style:const TextStyle(fontWeight:FontWeight.w600))),TextButton.icon(onPressed:palette.isEmpty?null:()=>setState(palette.clear),icon:const Icon(Icons.delete_sweep_outlined,size:18),label:const Text('پاک‌کردن پالت'))]),
+        if (palette.isEmpty) const Padding(padding:EdgeInsets.symmetric(vertical:16),child:Text('هنوز رنگی اضافه نشده؛ از کادر بالا رنگ دلخواهت را اضافه کن.',textAlign:TextAlign.center))
+        else Wrap(spacing:9,runSpacing:9,children:List.generate(palette.length,(index){final item=palette[index];return Tooltip(message:item.name,child:GestureDetector(onLongPress:()=>setState(()=>palette.removeAt(index)),child:Container(width:46,height:46,decoration:BoxDecoration(color:Color(item.backgroundColor),borderRadius:BorderRadius.circular(12),border:Border.all(color:Colors.black26)),child:Icon(Icons.check,color:Color(item.textColor),size:19))));})),
+        const SizedBox(height: 8), const Text('برای حذف یک رنگ، انگشتت را روی آن نگه دار.',style:TextStyle(fontSize:11,color:Colors.black54)),
+      ])),
+      const Divider(height:1),
+      Padding(padding:const EdgeInsets.fromLTRB(16,10,16,12),child:Row(children:[TextButton(onPressed:()=>Navigator.pop(context),child:const Text('انصراف')),const Spacer(),FilledButton.icon(onPressed:(){final names=palette.map((item)=>item.name).toList();Navigator.pop(context,ThemeManagerResult(List.of(palette),names));},icon:const Icon(Icons.save_outlined),label:const Text('ذخیره تنظیمات'))])),
+    ])),
   ));
+  Widget _sectionTitle(String title, IconData icon) => Row(children:[Icon(icon,size:20,color:Theme.of(context).colorScheme.primary),const SizedBox(width:8),Text(title,style:const TextStyle(fontWeight:FontWeight.bold,fontSize:15))]);
+  Widget _sliderRow(String label,double value,double min,double max,ValueChanged<double> onChanged,String valueText)=>Row(children:[SizedBox(width:62,child:Text(label,style:const TextStyle(fontSize:12))),Expanded(child:Slider(value:value,min:min,max:max,onChanged:onChanged)),SizedBox(width:42,child:Text(valueText,textAlign:TextAlign.left,style:const TextStyle(fontSize:11)))]);
 }
-
