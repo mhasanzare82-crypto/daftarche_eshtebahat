@@ -191,10 +191,32 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && !loading) {
+      _reloadNotesWhenResumed();
+    }
+  }
+
+  Future<void> _reloadNotesWhenResumed() async {
+    try {
+      // QuickNoteActivity writes through the native Android side. Reload the
+      // shared preferences when Flutter returns so newly saved notes appear
+      // immediately without requiring an app restart.
+      final latestNotes = await repository.loadNotes();
+      if (!mounted) return;
       setState(() {
+        notes
+          ..clear()
+          ..addAll(latestNotes);
+        widgetNoteIds.removeWhere(
+          (id) => !latestNotes.any((note) => note.id == id),
+        );
+        noteBackgroundColors.removeWhere(
+          (id, _) => !latestNotes.any((note) => note.id == id),
+        );
         _randomizeNoteBackgrounds();
-        featuredNote = _randomNote(notes, excludeId: featuredNote?.id);
+        featuredNote = _randomNote(latestNotes, excludeId: featuredNote?.id);
       });
+    } catch (error, stackTrace) {
+      debugPrint('Notebook resume refresh failed: $error\\n$stackTrace');
     }
   }
 
