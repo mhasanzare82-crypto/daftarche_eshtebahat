@@ -26,6 +26,24 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <activity
+            android:name=".QuickNoteActivity"
+            android:exported="false"
+            android:label="یادداشت سریع"
+            android:theme="@style/QuickNoteTheme"
+            android:windowSoftInputMode="stateAlwaysVisible|adjustResize" />
+
+        <receiver
+            android:name=".QuickNoteWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/quick_note_widget_info" />
+        </receiver>
+
         <receiver
             android:name=".NotebookWidgetProvider"
             android:exported="true">
@@ -35,6 +53,18 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/notebook_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".FeaturedNoteWidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.example.exm1.ACTION_NEXT_FEATURED_NOTE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/featured_note_widget_info" />
         </receiver>
 
         <!-- Don't delete the meta-data below.

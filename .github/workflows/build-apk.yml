@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - feature/random-featured-note-widget
   workflow_dispatch:
 
 permissions:
