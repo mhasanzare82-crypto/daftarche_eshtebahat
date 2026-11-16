@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/quick_note_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/notebook_widget_background"
+    android:clickable="true"
+    android:focusable="true"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:layoutDirection="locale">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="✎  یادداشت سریع"
+        android:textColor="#F5F6F8"
+        android:textSize="17sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:text="برای نوشتن و ذخیره یادداشت جدید لمس کن"
+        android:textColor="#C4CCD6"
+        android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/quick_note_open"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:background="#39434F"
+        android:paddingStart="20dp"
+        android:paddingTop="9dp"
+        android:paddingEnd="20dp"
+        android:paddingBottom="9dp"
+        android:text="＋  نوشتن یادداشت"
+        android:textColor="#FFFFFF"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+</LinearLayout>
