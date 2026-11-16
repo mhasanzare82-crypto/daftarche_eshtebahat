@@ -140,7 +140,7 @@ class NotebookApp extends StatelessWidget {
     builder: (context, interfaceFont, _) => ValueListenableBuilder<String>(
       valueListenable: appThemeName,
       builder: (context, selectedTheme, _) => MaterialApp(
-    debugShowCheckedModeBanner: false, title: 'دفترچه اشتباهات ترید',
+    debugShowCheckedModeBanner: false, title: 'دفترچه اشتباهات',
     theme: _buildAppTheme(selectedTheme, interfaceFont),
     localizationsDelegates: [...GlobalMaterialLocalizations.delegates, quill.FlutterQuillLocalizations.delegate],
     supportedLocales: const [Locale('fa'), Locale('en')],
