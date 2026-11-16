@@ -178,6 +178,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
   final customFonts=<String, String>{};
   final randomThemeNames=<String>{};
   final pinnedNoteIds=<String>{};
+  final widgetNoteIds=<String>{};
   final pinnedFolderIds=<String>{};
   final textColorPalette=<int>[];
   bool showPinnedOnly=false;
@@ -236,6 +237,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       final loadedFonts = await repository.loadCustomFonts();
       final loadedRandomThemeNames = await repository.loadRandomThemeNames();
       final loadedPinnedNoteIds = await repository.loadPinnedNoteIds();
+      final loadedWidgetNoteIds = await repository.loadWidgetNoteIds();
       final loadedPinnedFolderIds = await repository.loadPinnedFolderIds();
       final loadedTextColorPalette = await repository.loadTextColorPalette();
       final loadedAppFontFamily = await repository.loadAppInterfaceFontFamily();
@@ -247,6 +249,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       customFonts.addAll(loadedFonts);
       randomThemeNames.addAll(loadedRandomThemeNames);
       pinnedNoteIds.addAll(loadedPinnedNoteIds);
+      widgetNoteIds.addAll(loadedWidgetNoteIds.where((id) => loadedNotes.any((note) => note.id == id)));
       pinnedFolderIds.addAll(loadedPinnedFolderIds);
       textColorPalette.addAll(loadedTextColorPalette);
       for (final entry in customFonts.entries) {
@@ -276,6 +279,19 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
   Future<void> persistFolders() => repository.saveFolders(folders);
   Future<void> persistThemes() => repository.saveThemes(themes);
   Future<void> persistPinnedNotes() => repository.savePinnedNoteIds(pinnedNoteIds.toList());
+  Future<void> persistWidgetNotes() => repository.saveWidgetNoteIds(widgetNoteIds.toList());
+
+  Future<void> toggleWidgetNote(Note note) async {
+    setState(() {
+      if (!widgetNoteIds.add(note.id)) widgetNoteIds.remove(note.id);
+    });
+    await persistWidgetNotes();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(widgetNoteIds.contains(note.id) ? 'یادداشت به ویجت اضافه شد' : 'یادداشت از ویجت برداشته شد'),
+      ));
+    }
+  }
   Future<void> persistPinnedFolders() => repository.savePinnedFolderIds(pinnedFolderIds.toList());
 
   Future<void> togglePinnedNote(Note note) async {
@@ -474,7 +490,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
     final yes=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(
       title:const Text('حذف یادداشت؟'),content:const Text('این یادداشت حذف خواهد شد.'),
       actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('انصراف')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('حذف'))]));
-    if(yes==true){setState((){notes.removeWhere((x)=>x.id==n.id);if(featuredNote?.id==n.id)featuredNote=_randomNote(notes);});await persist();}
+    if(yes==true){setState((){notes.removeWhere((x)=>x.id==n.id);widgetNoteIds.remove(n.id);if(featuredNote?.id==n.id)featuredNote=_randomNote(notes);});await persist();await persistWidgetNotes();}
   }
 
   String _xmlEscape(String value) => value.replaceAll('&', '&amp;')
@@ -898,6 +914,9 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
   void showNoteMenu(Note note) {
     showModalBottomSheet<void>(context: context, builder: (sheetContext) =>
       Directionality(textDirection: TextDirection.rtl, child: SafeArea(child: Wrap(children: [
+        ListTile(leading: Icon(widgetNoteIds.contains(note.id) ? Icons.widgets : Icons.widgets_outlined),
+          title: Text(widgetNoteIds.contains(note.id) ? 'برداشتن از ویجت' : 'افزودن به ویجت'),
+          onTap: () { Navigator.pop(sheetContext); toggleWidgetNote(note); }),
         ListTile(leading: Icon(pinnedNoteIds.contains(note.id) ? Icons.push_pin : Icons.push_pin_outlined),
           title: Text(pinnedNoteIds.contains(note.id) ? 'برداشتن سنجاق یادداشت' : 'سنجاق کردن یادداشت'),
           onTap: () { Navigator.pop(sheetContext); togglePinnedNote(note); }),
