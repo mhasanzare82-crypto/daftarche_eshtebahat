@@ -80,6 +80,7 @@ class FeaturedNoteWidgetProvider : AppWidgetProvider() {
             views.setInt(R.id.featured_note_root, "setBackgroundColor", widgetBackground)
             views.setTextColor(R.id.featured_note_body, widgetText)
             views.setTextColor(R.id.featured_note_next, widgetHeading)
+            views.setTextColor(R.id.featured_note_heading, widgetText)
             if (selected == null) {
                 views.setTextViewText(R.id.featured_note_title, "نوشته‌ای برای ویجت انتخاب نشده")
                 views.setTextViewText(R.id.featured_note_body, "از گزینه‌های هر یادداشت، «افزودن به ویجت» را بزن.")
