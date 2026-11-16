@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/featured_note_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/notebook_widget_background"
+    android:clickable="true"
+    android:focusable="true"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:layoutDirection="locale">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="✦  عنوان تصادفی"
+            android:textColor="#BFC7D2"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/featured_note_next"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="#39434F"
+            android:paddingStart="10dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="6dp"
+            android:text="عنوان بعدی  ↻"
+            android:textColor="#F2F4F7"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/featured_note_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:text="عنوان یادداشت"
+        android:textColor="#F5F6F8"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/featured_note_body"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="9dp"
+        android:ellipsize="end"
+        android:gravity="top"
+        android:maxLines="3"
+        android:text="خلاصه یادداشت در این قسمت نمایش داده می‌شود."
+        android:textColor="#C4CCD6"
+        android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/featured_note_hint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:text="برای باز کردن دفترچه لمس کن"
+        android:textColor="#929EAC"
+        android:textSize="10sp" />
+</LinearLayout>
