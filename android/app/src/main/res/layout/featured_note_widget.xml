@@ -20,7 +20,8 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="✦  عنوان تصادفی"
+            android:id="@+id/featured_note_heading"
+            android:text="✦  یادآوری‌های روزانه"
             android:textColor="#BFC7D2"
             android:textSize="12sp"
             android:textStyle="bold" />
@@ -34,13 +35,15 @@
             android:paddingTop="6dp"
             android:paddingEnd="10dp"
             android:paddingBottom="6dp"
-            android:text="عنوان بعدی  ↻"
+            android:text="↻"
             android:textColor="#F2F4F7"
-            android:textSize="11sp" />
+            android:textSize="19sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
     <TextView
         android:id="@+id/featured_note_title"
+        android:visibility="gone"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
@@ -66,6 +69,7 @@
 
     <TextView
         android:id="@+id/featured_note_hint"
+        android:visibility="gone"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="end"

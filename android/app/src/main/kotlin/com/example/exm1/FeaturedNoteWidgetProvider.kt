@@ -74,6 +74,13 @@ class FeaturedNoteWidgetProvider : AppWidgetProvider() {
             widgetPrefs.edit().putString(key, selected?.optString("id")).apply()
 
             val views = RemoteViews(context.packageName, R.layout.featured_note_widget)
+            val widgetBackground = appPrefs.getInt("flutter.featured_note_widget_background_color", android.graphics.Color.rgb(36, 42, 50))
+            val widgetText = appPrefs.getInt("flutter.featured_note_widget_text_color", android.graphics.Color.rgb(196, 204, 214))
+            val widgetHeading = appPrefs.getInt("flutter.featured_note_widget_heading_color", android.graphics.Color.rgb(191, 199, 210))
+            views.setInt(R.id.featured_note_root, "setBackgroundColor", widgetBackground)
+            views.setTextColor(R.id.featured_note_body, widgetText)
+            views.setTextColor(R.id.featured_note_next, widgetHeading)
+            views.setTextColor(R.id.featured_note_heading, widgetText)
             if (selected == null) {
                 views.setTextViewText(R.id.featured_note_title, "نوشته‌ای برای ویجت انتخاب نشده")
                 views.setTextViewText(R.id.featured_note_body, "از گزینه‌های هر یادداشت، «افزودن به ویجت» را بزن.")
@@ -89,12 +96,9 @@ class FeaturedNoteWidgetProvider : AppWidgetProvider() {
                 val body = displayBody.replace(Regex("\\s+"), " ").trim()
                 val snippet = body.take(112).let { if (body.length > 112) "$it…" else it }
                     .ifBlank { "این یادداشت متنی ندارد." }
-                views.setTextViewText(R.id.featured_note_title, title)
+                views.setTextViewText(R.id.featured_note_title, "یادآوری‌های روزانه")
                 views.setTextViewText(R.id.featured_note_body, snippet)
-                views.setTextViewText(
-                    R.id.featured_note_hint,
-                    if (selected.optString("id") == QUICK_NOTE_ENTRIES_ID) "یک اشتباه به‌صورت تصادفی" else "یک یادداشت برای مرور"
-                )
+                views.setViewVisibility(R.id.featured_note_hint, android.view.View.GONE)
             }
 
             val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)

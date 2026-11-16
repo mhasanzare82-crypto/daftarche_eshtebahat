@@ -17,6 +17,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'models/note.dart';
 import 'data/notebook_repository.dart';
 import 'screens/theme_dialogs.dart';
@@ -181,6 +182,8 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
   final widgetNoteIds=<String>{};
   final pinnedFolderIds=<String>{};
   final textColorPalette=<int>[];
+  int featuredWidgetTextColor = 0xFFC4CCD6;
+  int featuredWidgetBackgroundColor = 0xFF242A32;
   bool showPinnedOnly=false;
   final noteBackgroundColors=<String, int>{};
   static const defaultThemes=[NoteTheme('یاسی',0xFFEDE7F6),NoteTheme('آبی',0xFFE3F2FD),NoteTheme('سبز',0xFFE8F5E9),NoteTheme('صورتی',0xFFFCE4EC),NoteTheme('هلویی',0xFFFFEAD5)];
@@ -242,6 +245,9 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       final loadedTextColorPalette = await repository.loadTextColorPalette();
       final loadedAppFontFamily = await repository.loadAppInterfaceFontFamily();
       final loadedAppTheme = await repository.loadAppTheme();
+      final widgetPrefs = await SharedPreferences.getInstance();
+      featuredWidgetTextColor = widgetPrefs.getInt('featured_note_widget_text_color') ?? 0xFFC4CCD6;
+      featuredWidgetBackgroundColor = widgetPrefs.getInt('featured_note_widget_background_color') ?? 0xFF242A32;
       notes.addAll(loadedNotes);
       featuredNote = _randomNote(loadedNotes);
       themes.addAll(loadedThemes);
@@ -351,6 +357,8 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       initialTextColorPalette:List<int>.of(textColorPalette),
       initialAppFontFamily:appInterfaceFontFamily.value,
       initialAppThemeName:appThemeName.value,
+      initialWidgetTextColor:featuredWidgetTextColor,
+      initialWidgetBackgroundColor:featuredWidgetBackgroundColor,
       onAddCustomFont:() async {
         await addCustomFont();
         return customFonts.keys.toList();
@@ -363,12 +371,18 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
         textColorPalette..clear()..addAll(result.textColorPalette);
         appInterfaceFontFamily.value = result.appFontFamily;
         appThemeName.value = result.appThemeName;
+        featuredWidgetTextColor = result.widgetTextColor;
+        featuredWidgetBackgroundColor = result.widgetBackgroundColor;
       });
       await persistThemes();
       await repository.saveRandomThemeNames(randomThemeNames.toList());
       await repository.saveTextColorPalette(textColorPalette);
       await repository.saveAppInterfaceFontFamily(result.appFontFamily);
       await repository.saveAppTheme(result.appThemeName);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('featured_note_widget_text_color', featuredWidgetTextColor);
+      await prefs.setInt('featured_note_widget_background_color', featuredWidgetBackgroundColor);
+      await const MethodChannel('com.mhasanzare82.daftarcheeshtebahat/widget').invokeMethod('refreshWidget');
     }
   }
   Future<void> addCustomFont() async {
