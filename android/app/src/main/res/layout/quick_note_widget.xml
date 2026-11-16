@@ -15,7 +15,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:text="✎  یادداشت سریع"
+        android:text="✎  یادداشت اشتباهات"
         android:textColor="#F5F6F8"
         android:textSize="17sp"
         android:textStyle="bold" />
@@ -25,7 +25,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:gravity="center"
-        android:text="برای نوشتن و ذخیره یادداشت جدید لمس کن"
+        android:text="برای ثبت و ذخیره اشتباه جدید لمس کن"
         android:textColor="#C4CCD6"
         android:textSize="12sp" />
 
@@ -39,7 +39,7 @@
         android:paddingTop="9dp"
         android:paddingEnd="20dp"
         android:paddingBottom="9dp"
-        android:text="＋  نوشتن یادداشت"
+        android:text="ثبت اشتباه جدید"
         android:textColor="#FFFFFF"
         android:textSize="13sp"
         android:textStyle="bold" />
