@@ -25,6 +25,7 @@ class FeaturedNoteWidgetProvider : AppWidgetProvider() {
     companion object {
         private const val PREFS_FILE = "FlutterSharedPreferences"
         private const val NOTES_KEY = "flutter.notebook_notes"
+        private const val WIDGET_NOTE_IDS_KEY = "flutter.notebook_widget_note_ids"
         private const val WIDGET_PREFS = "featured_note_widget"
         private const val ACTION_NEXT_NOTE = "com.example.exm1.ACTION_NEXT_FEATURED_NOTE"
 
@@ -48,7 +49,13 @@ class FeaturedNoteWidgetProvider : AppWidgetProvider() {
             } catch (_: Exception) {
                 JSONArray()
             }
-            val available = (0 until notes.length()).mapNotNull { notes.optJSONObject(it) }
+            val allNotes = (0 until notes.length()).mapNotNull { notes.optJSONObject(it) }
+            val selectedIds = try {
+                val raw = appPrefs.getString(WIDGET_NOTE_IDS_KEY, "[]") ?: "[]"
+                val ids = JSONArray(raw)
+                (0 until ids.length()).map { ids.optString(it) }
+            } catch (_: Exception) { emptyList() }
+            val available = selectedIds.mapNotNull { id -> allNotes.firstOrNull { it.optString("id") == id } }
             val widgetPrefs = context.getSharedPreferences(WIDGET_PREFS, Context.MODE_PRIVATE)
             val key = "featured_note_$widgetId"
             val previousId = widgetPrefs.getString(key, null)
@@ -56,19 +63,19 @@ class FeaturedNoteWidgetProvider : AppWidgetProvider() {
             val selected = when {
                 available.isEmpty() -> null
                 chooseNext -> {
-                    val candidates = available.filter { it.optString("id") != previousId }
-                    (candidates.ifEmpty { available }).random()
+                    val currentIndex = available.indexOfFirst { it.optString("id") == previousId }
+                    available[(currentIndex + 1).mod(available.size)]
                 }
                 previous != null -> previous
-                else -> available.random()
+                else -> available.first()
             }
             widgetPrefs.edit().putString(key, selected?.optString("id")).apply()
 
             val views = RemoteViews(context.packageName, R.layout.featured_note_widget)
             if (selected == null) {
-                views.setTextViewText(R.id.featured_note_title, "هنوز یادداشتی نداری")
-                views.setTextViewText(R.id.featured_note_body, "برای ساخت اولین یادداشت، دفترچه را باز کن.")
-                views.setTextViewText(R.id.featured_note_hint, "دفترچه اشتباهات")
+                views.setTextViewText(R.id.featured_note_title, "نوشته‌ای برای ویجت انتخاب نشده")
+                views.setTextViewText(R.id.featured_note_body, "از گزینه‌های هر یادداشت، «افزودن به ویجت» را بزن.")
+                views.setTextViewText(R.id.featured_note_hint, "نوشته‌های منتخب تو")
             } else {
                 val title = selected.optString("title").ifBlank { "بدون عنوان" }
                 val body = plainText(selected.optString("body"))
