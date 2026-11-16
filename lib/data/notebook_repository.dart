@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/note.dart';
+import '../widgets/home_widget_sync.dart';
 
 /// Single persistence boundary for notebook data.
 /// Keeps the existing SharedPreferences keys to preserve user data.
@@ -46,6 +47,7 @@ class NotebookRepository {
     if (!await prefs.setStringList(_pinnedNotesKey, values)) {
       throw StateError('Unable to persist pinned notes');
     }
+    await HomeWidgetSync.refresh();
   }
 
   Future<void> savePinnedFolderIds(List<String> values) async {
@@ -110,9 +112,15 @@ class NotebookRepository {
     catch (_) { return <String, String>{}; }
   }
 
-  Future<void> saveNotes(List<Note> values) => _save(_notesKey, values.map((e) => e.toJson()).toList());
+  Future<void> saveNotes(List<Note> values) async {
+    await _save(_notesKey, values.map((e) => e.toJson()).toList());
+    await HomeWidgetSync.refresh();
+  }
   Future<void> saveThemes(List<NoteTheme> values) => _save(_themesKey, values.map((e) => e.toJson()).toList());
-  Future<void> saveFolders(List<NoteFolder> values) => _save(_foldersKey, values.map((e) => e.toJson()).toList());
+  Future<void> saveFolders(List<NoteFolder> values) async {
+    await _save(_foldersKey, values.map((e) => e.toJson()).toList());
+    await HomeWidgetSync.refresh();
+  }
   Future<void> saveCustomFonts(Map<String, String> values) => _save(_fontsKey, values);
 
   Future<void> _save(String key, Object value) async {
