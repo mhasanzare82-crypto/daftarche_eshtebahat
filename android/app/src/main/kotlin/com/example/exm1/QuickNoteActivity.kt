@@ -18,7 +18,7 @@ import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
+import java.util.TimeZone
 
 class QuickNoteActivity : Activity() {
     private lateinit var editor: EditText
@@ -86,29 +86,48 @@ class QuickNoteActivity : Activity() {
             val key = "flutter.notebook_notes"
             val notes = try { JSONArray(prefs.getString(key, "[]") ?: "[]") } catch (_: Exception) { JSONArray() }
             val now = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
-                timeZone = java.util.TimeZone.getTimeZone("UTC")
+                timeZone = TimeZone.getTimeZone("UTC")
             }.format(Date())
-            val title = body.lineSequence().first().take(48).ifBlank { "یادداشت سریع" }
-            val note = JSONObject().apply {
-                put("id", UUID.randomUUID().toString())
-                put("title", title)
-                put("body", body)
-                put("updated", now)
-                put("images", JSONArray())
-                put("themeColor", -1184275)
-                put("themeTextColor", -14474461)
-                put("themeFontFamily", "sans-serif")
-                put("folderId", JSONObject.NULL)
-                put("audios", JSONArray())
+
+            // Keep every Quick Note widget entry in one persistent note in the app's notebook.
+            val widgetNoteId = "quick_note_widget_entries"
+            var widgetNote: JSONObject? = null
+            for (index in 0 until notes.length()) {
+                val candidate = notes.optJSONObject(index) ?: continue
+                if (candidate.optString("id") == widgetNoteId) {
+                    widgetNote = candidate
+                    break
+                }
             }
-            notes.put(note)
+
+            if (widgetNote != null) {
+                val previousBody = widgetNote.optString("body")
+                val separator = "\n-------------------------------------------------------------------------------\n"
+                widgetNote.put("body", if (previousBody.isBlank()) body else "$previousBody$separator$body")
+                widgetNote.put("updated", now)
+            } else {
+                val note = JSONObject().apply {
+                    put("id", widgetNoteId)
+                    put("title", "یادداشت‌های ویجت")
+                    put("body", body)
+                    put("updated", now)
+                    put("images", JSONArray())
+                    put("themeColor", -1184275)
+                    put("themeTextColor", -14474461)
+                    put("themeFontFamily", "sans-serif")
+                    put("folderId", JSONObject.NULL)
+                    put("audios", JSONArray())
+                }
+                notes.put(note)
+            }
+
             if (!prefs.edit().putString(key, notes.toString()).commit()) {
                 throw IllegalStateException("ذخیره انجام نشد")
             }
             NotebookWidgetProvider.refreshAll(this)
             FeaturedNoteWidgetProvider.refreshAll(this)
             QuickNoteWidgetProvider.refreshAll(this)
-            Toast.makeText(this, "یادداشت در دفترچه ذخیره شد", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "اشتباه در یادداشت‌های برنامه ذخیره شد", Toast.LENGTH_SHORT).show()
             editor.setText("")
             finish()
         } catch (error: Exception) {
