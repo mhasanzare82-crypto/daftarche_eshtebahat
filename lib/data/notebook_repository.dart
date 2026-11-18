@@ -21,6 +21,9 @@ class NotebookRepository {
 
   Future<List<Note>> loadNotes() async {
     final prefs = await SharedPreferences.getInstance();
+    // Quick Note writes through Android SharedPreferences directly. Reload the
+    // plugin cache before reading so Flutter sees native writes immediately.
+    await prefs.reload();
     return _decodeList(prefs.getString(_notesKey), Note.fromJson);
   }
 
