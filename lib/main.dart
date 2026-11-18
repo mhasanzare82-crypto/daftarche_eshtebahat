@@ -66,7 +66,7 @@ String _notePlainText(String body) {
       .trim();
 }
 
-final ValueNotifier<String> appInterfaceFontFamily = ValueNotifier<String>('sans-serif');
+final ValueNotifier<String> appInterfaceFontFamily = ValueNotifier<String>('Estedad');
 final ValueNotifier<String> appThemeName = ValueNotifier<String>('دودی');
 
 ThemeData _buildAppTheme(String preset, String fontFamily) {
@@ -284,7 +284,18 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
           }
         } catch (_) { /* An unavailable custom font must not block opening the notebook. */ }
       }
-      appInterfaceFontFamily.value = customFonts.containsKey(loadedAppFontFamily) ? loadedAppFontFamily : 'sans-serif';
+      // Load the bundled Estedad font before applying the app-wide theme.
+      try {
+        final estedadBytes = await rootBundle.load('assets/fonts/Estedad[wght].ttf');
+        final estedadLoader = FontLoader('Estedad')
+          ..addFont(Future.value(estedadBytes));
+        await estedadLoader.load();
+      } catch (error) {
+        debugPrint('Bundled Estedad font could not be loaded: $error');
+      }
+      appInterfaceFontFamily.value = customFonts.containsKey(loadedAppFontFamily)
+          ? loadedAppFontFamily
+          : 'Estedad';
       appThemeName.value = ['سفید', 'سیاه', 'دودی', 'نقره‌ای'].contains(loadedAppTheme) ? loadedAppTheme : 'دودی';
       if (themes.isEmpty) themes.addAll(defaultThemes);
       if (randomThemeNames.isEmpty) randomThemeNames.addAll(themes.map((theme) => theme.name));
@@ -1178,7 +1189,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
   late String themeFontFamily;
   String? folderId;
   static const marker = '__quill_note_v1__';
-  static const builtInToolbarFonts = ['sans-serif'];
+  static const builtInToolbarFonts = ['sans-serif', 'Estedad'];
   Map<String, String> get toolbarFontFamilies => {
     for (final family in {...builtInToolbarFonts, ...widget.customFonts, themeFontFamily})
       'نمونه یک فونت · $family': family,

@@ -28,3 +28,9 @@ flutter:
   config:
     enable-swift-package-manager: false
   uses-material-design: true
+  fonts:
+    - family: Estedad
+      fonts:
+        - asset: assets/fonts/Estedad[wght].ttf
+          weight: 100
+          style: normal
