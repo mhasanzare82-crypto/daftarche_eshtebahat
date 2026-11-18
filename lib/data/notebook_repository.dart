@@ -17,6 +17,7 @@ class NotebookRepository {
   static const _textColorPaletteKey = 'notebook_text_color_palette';
   static const _appInterfaceFontKey = 'notebook_app_interface_font_family';
   static const _appThemeKey = 'notebook_app_theme';
+  static const _quickWidgetNoteId = 'quick_note_widget_entries';
 
   Future<List<Note>> loadNotes() async {
     final prefs = await SharedPreferences.getInstance();
@@ -130,9 +131,30 @@ class NotebookRepository {
   }
 
   Future<void> saveNotes(List<Note> values) async {
-    await _save(_notesKey, values.map((e) => e.toJson()).toList());
+    // Quick Note writes directly from its native Android Activity. If Flutter
+    // was already running in the background, its in-memory list can be stale.
+    // Merge the latest native widget entry before writing the full notebook so
+    // a later Flutter save cannot silently overwrite text just captured there.
+    final prefs = await SharedPreferences.getInstance();
+    final storedNotes = _decodeList(prefs.getString(_notesKey), Note.fromJson);
+    final latestQuickNote = storedNotes
+        .where((note) => note.id == _quickWidgetNoteId)
+        .firstOrNull;
+    final notesToSave = List<Note>.of(values);
+    if (latestQuickNote != null) {
+      final currentIndex = notesToSave.indexWhere(
+        (note) => note.id == _quickWidgetNoteId,
+      );
+      if (currentIndex == -1) {
+        notesToSave.add(latestQuickNote);
+      } else if (latestQuickNote.updated.isAfter(notesToSave[currentIndex].updated)) {
+        notesToSave[currentIndex] = latestQuickNote;
+      }
+    }
+    await _save(_notesKey, notesToSave.map((e) => e.toJson()).toList());
     await HomeWidgetSync.refresh();
   }
+
   Future<void> saveThemes(List<NoteTheme> values) => _save(_themesKey, values.map((e) => e.toJson()).toList());
   Future<void> saveFolders(List<NoteFolder> values) async {
     await _save(_foldersKey, values.map((e) => e.toJson()).toList());
