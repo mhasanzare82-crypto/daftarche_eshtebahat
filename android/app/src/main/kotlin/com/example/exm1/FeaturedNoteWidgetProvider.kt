@@ -27,7 +27,6 @@ class FeaturedNoteWidgetProvider : AppWidgetProvider() {
         private const val WIDGET_NOTE_IDS_KEY = "flutter.notebook_widget_note_ids"
         private const val WIDGET_PREFS = "featured_note_widget"
         private const val ACTION_NEXT_NOTE = "com.example.exm1.ACTION_NEXT_FEATURED_NOTE"
-        private const val QUICK_NOTE_ENTRIES_ID = "quick_note_widget_entries"
 
         fun refreshAll(context: Context, chooseNext: Boolean = false) {
             val manager = AppWidgetManager.getInstance(context)
@@ -55,9 +54,13 @@ class FeaturedNoteWidgetProvider : AppWidgetProvider() {
                 val ids = JSONArray(raw)
                 (0 until ids.length()).map { ids.optString(it) }
             } catch (_: Exception) { emptyList() }
-            val available = selectedIds.mapNotNull { id ->
+            // Keep the widget useful if the saved selection is empty or stale.
+            // Prefer explicitly selected notes, but fall back to the notebook notes
+            // instead of leaving the daily reminder widget blank.
+            val selectedNotes = selectedIds.mapNotNull { id ->
                 allNotes.firstOrNull { it.optString("id") == id }
             }
+            val available = selectedNotes.ifEmpty { allNotes }
             val widgetPrefs = context.getSharedPreferences(WIDGET_PREFS, Context.MODE_PRIVATE)
             val key = "featured_note_$widgetId"
             val previousId = widgetPrefs.getString(key, null)
@@ -99,11 +102,9 @@ class FeaturedNoteWidgetProvider : AppWidgetProvider() {
             } else {
                 val title = selected.optString("title").ifBlank { "بدون عنوان" }
                 val fullBody = plainText(selected.optString("body"))
-                val displayBody = if (selected.optString("id") == QUICK_NOTE_ENTRIES_ID) {
-                    pickRandomEntry(fullBody)
-                } else {
-                    fullBody
-                }
+                // Every note can contain multiple entries separated by the
+                // standard 20-hyphen or 79-hyphen divider.
+                val displayBody = pickRandomEntry(fullBody)
                 val body = displayBody.replace(Regex("\\s+"), " ").trim()
                 val snippet = body.take(180).let { if (body.length > 180) "$it…" else it }
                     .ifBlank { "این یادداشت متنی ندارد." }
