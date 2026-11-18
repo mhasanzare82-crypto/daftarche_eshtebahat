@@ -8,7 +8,6 @@ import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
 import org.json.JSONArray
-import org.json.JSONObject
 
 class FeaturedNoteWidgetProvider : AppWidgetProvider() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -29,7 +28,6 @@ class FeaturedNoteWidgetProvider : AppWidgetProvider() {
         private const val WIDGET_PREFS = "featured_note_widget"
         private const val ACTION_NEXT_NOTE = "com.example.exm1.ACTION_NEXT_FEATURED_NOTE"
         private const val QUICK_NOTE_ENTRIES_ID = "quick_note_widget_entries"
-        private const val QUICK_NOTE_SEPARATOR = "-------------------------------------------------------------------------------"
 
         fun refreshAll(context: Context, chooseNext: Boolean = false) {
             val manager = AppWidgetManager.getInstance(context)
@@ -57,7 +55,9 @@ class FeaturedNoteWidgetProvider : AppWidgetProvider() {
                 val ids = JSONArray(raw)
                 (0 until ids.length()).map { ids.optString(it) }
             } catch (_: Exception) { emptyList() }
-            val available = selectedIds.mapNotNull { id -> allNotes.firstOrNull { it.optString("id") == id } }
+            val available = selectedIds.mapNotNull { id ->
+                allNotes.firstOrNull { it.optString("id") == id }
+            }
             val widgetPrefs = context.getSharedPreferences(WIDGET_PREFS, Context.MODE_PRIVATE)
             val key = "featured_note_$widgetId"
             val previousId = widgetPrefs.getString(key, null)
@@ -74,17 +74,28 @@ class FeaturedNoteWidgetProvider : AppWidgetProvider() {
             widgetPrefs.edit().putString(key, selected?.optString("id")).apply()
 
             val views = RemoteViews(context.packageName, R.layout.featured_note_widget)
-            val widgetBackground = appPrefs.getInt("flutter.featured_note_widget_background_color", android.graphics.Color.rgb(36, 42, 50))
-            val widgetText = appPrefs.getInt("flutter.featured_note_widget_text_color", android.graphics.Color.rgb(196, 204, 214))
-            val widgetHeading = appPrefs.getInt("flutter.featured_note_widget_heading_color", android.graphics.Color.rgb(191, 199, 210))
+            val widgetBackground = appPrefs.getInt(
+                "flutter.featured_note_widget_background_color",
+                android.graphics.Color.rgb(36, 42, 50)
+            )
+            val widgetText = appPrefs.getInt(
+                "flutter.featured_note_widget_text_color",
+                android.graphics.Color.rgb(196, 204, 214)
+            )
+            val widgetHeading = appPrefs.getInt(
+                "flutter.featured_note_widget_heading_color",
+                android.graphics.Color.rgb(191, 199, 210)
+            )
             views.setInt(R.id.featured_note_root, "setBackgroundColor", widgetBackground)
             views.setTextColor(R.id.featured_note_body, widgetText)
             views.setTextColor(R.id.featured_note_next, widgetHeading)
             views.setTextColor(R.id.featured_note_heading, widgetText)
+
             if (selected == null) {
-                views.setTextViewText(R.id.featured_note_title, "نوشته‌ای برای ویجت انتخاب نشده")
+                views.setViewVisibility(R.id.featured_note_title, android.view.View.GONE)
                 views.setTextViewText(R.id.featured_note_body, "از گزینه‌های هر یادداشت، «افزودن به ویجت» را بزن.")
-                views.setTextViewText(R.id.featured_note_hint, "نوشته‌های منتخب تو")
+                views.setViewVisibility(R.id.featured_note_hint, android.view.View.VISIBLE)
+                views.setTextViewText(R.id.featured_note_hint, "نوشته‌ای برای ویجت انتخاب نشده")
             } else {
                 val title = selected.optString("title").ifBlank { "بدون عنوان" }
                 val fullBody = plainText(selected.optString("body"))
@@ -94,9 +105,13 @@ class FeaturedNoteWidgetProvider : AppWidgetProvider() {
                     fullBody
                 }
                 val body = displayBody.replace(Regex("\\s+"), " ").trim()
-                val snippet = body.take(112).let { if (body.length > 112) "$it…" else it }
+                val snippet = body.take(180).let { if (body.length > 180) "$it…" else it }
                     .ifBlank { "این یادداشت متنی ندارد." }
-                views.setTextViewText(R.id.featured_note_title, "یادآوری‌های روزانه")
+
+                // The title view starts as GONE in XML; explicitly reveal it and show
+                // the selected note's real title rather than the widget's generic label.
+                views.setViewVisibility(R.id.featured_note_title, android.view.View.VISIBLE)
+                views.setTextViewText(R.id.featured_note_title, title)
                 views.setTextViewText(R.id.featured_note_body, snippet)
                 views.setViewVisibility(R.id.featured_note_hint, android.view.View.GONE)
             }
@@ -120,7 +135,6 @@ class FeaturedNoteWidgetProvider : AppWidgetProvider() {
             views.setOnClickPendingIntent(R.id.featured_note_next, nextPending)
             manager.updateAppWidget(widgetId, views)
         }
-
 
         private fun pickRandomEntry(body: String): String {
             val separatorRegex = Regex("(?m)^\\s*-{10,}\\s*$")
