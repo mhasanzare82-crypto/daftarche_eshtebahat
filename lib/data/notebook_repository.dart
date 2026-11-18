@@ -137,9 +137,10 @@ class NotebookRepository {
     // a later Flutter save cannot silently overwrite text just captured there.
     final prefs = await SharedPreferences.getInstance();
     final storedNotes = _decodeList(prefs.getString(_notesKey), Note.fromJson);
-    final latestQuickNote = storedNotes
+    final quickNotes = storedNotes
         .where((note) => note.id == _quickWidgetNoteId)
-        .firstOrNull;
+        .toList();
+    final latestQuickNote = quickNotes.isEmpty ? null : quickNotes.first;
     final notesToSave = List<Note>.of(values);
     if (latestQuickNote != null) {
       final currentIndex = notesToSave.indexWhere(
