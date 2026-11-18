@@ -60,7 +60,11 @@ class QuickNoteActivity : Activity() {
         }
         buttons.addView(Button(this).apply {
             text = "ذخیره یادداشت"
-            setOnClickListener { saveNote() }
+            isAllCaps = false
+            setOnClickListener {
+                isEnabled = false
+                saveNote { isEnabled = true }
+            }
         }, LinearLayout.LayoutParams(0, dp(52), 1f))
         buttons.addView(Button(this).apply {
             text = "انصراف"
@@ -75,7 +79,7 @@ class QuickNoteActivity : Activity() {
         }
     }
 
-    private fun saveNote() {
+    private fun saveNote(onFinished: () -> Unit) {
         val body = editor.text.toString().trim()
         if (body.isEmpty()) {
             Toast.makeText(this, "اول متن یادداشت رو بنویس", Toast.LENGTH_SHORT).show()
@@ -84,7 +88,10 @@ class QuickNoteActivity : Activity() {
         try {
             val prefs = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
             val key = "flutter.notebook_notes"
-            val notes = try { JSONArray(prefs.getString(key, "[]") ?: "[]") } catch (_: Exception) { JSONArray() }
+            val stored = prefs.getString(key, null)
+            // Never replace a damaged/unexpected notebook value with an empty
+            // array: that would silently erase every existing note.
+            val notes = if (stored.isNullOrBlank()) JSONArray() else JSONArray(stored)
             val now = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
                 timeZone = TimeZone.getTimeZone("UTC")
             }.format(Date())
@@ -124,14 +131,22 @@ class QuickNoteActivity : Activity() {
             if (!prefs.edit().putString(key, notes.toString()).commit()) {
                 throw IllegalStateException("ذخیره انجام نشد")
             }
-            NotebookWidgetProvider.refreshAll(this)
-            FeaturedNoteWidgetProvider.refreshAll(this)
-            QuickNoteWidgetProvider.refreshAll(this)
-            Toast.makeText(this, "اشتباه در یادداشت‌های برنامه ذخیره شد", Toast.LENGTH_SHORT).show()
+            // Persistence is the success criterion. A launcher/widget refresh
+            // failure must not be reported as a failed save after commit().
+            listOf<() -> Unit>(
+                { NotebookWidgetProvider.refreshAll(this) },
+                { FeaturedNoteWidgetProvider.refreshAll(this) },
+                { QuickNoteWidgetProvider.refreshAll(this) }
+            ).forEach { refresh ->
+                try { refresh() } catch (_: Exception) { /* Saved data remains safe. */ }
+            }
+            Toast.makeText(this, "یادداشت با موفقیت ذخیره شد", Toast.LENGTH_SHORT).show()
             editor.setText("")
             finish()
         } catch (error: Exception) {
-            Toast.makeText(this, "ذخیره یادداشت ناموفق بود", Toast.LENGTH_LONG).show()
+            val detail = error.message?.takeIf { it.isNotBlank() } ?: "خطای ناشناخته"
+            Toast.makeText(this, "ذخیره یادداشت انجام نشد: $detail", Toast.LENGTH_LONG).show()
+            onFinished()
         }
     }
 
