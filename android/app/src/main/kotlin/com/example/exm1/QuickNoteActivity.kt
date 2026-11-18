@@ -150,5 +150,37 @@ class QuickNoteActivity : Activity() {
         }
     }
 
+
+    /**
+     * Append a Quick Note without corrupting notes previously edited with
+     * Flutter Quill or the legacy rich-text editor.
+     */
+    private fun appendEntry(previousBody: String, newEntry: String): String {
+        val separator = "\\n-------------------------------------------------------------------------------\\n"
+        if (previousBody.isBlank()) return newEntry
+
+        val quillMarker = "__quill_note_v1__"
+        val legacyMarker = "__rich_note_v1__"
+        return try {
+            when {
+                previousBody.startsWith(quillMarker) -> {
+                    val ops = JSONArray(previousBody.removePrefix(quillMarker))
+                    ops.put(JSONObject().put("insert", separator + newEntry))
+                    quillMarker + ops.toString()
+                }
+                previousBody.startsWith(legacyMarker) -> {
+                    val blocks = JSONArray(previousBody.removePrefix(legacyMarker))
+                    blocks.put(JSONObject().put("type", "text").put("text", separator + newEntry))
+                    legacyMarker + blocks.toString()
+                }
+                else -> previousBody + separator + newEntry
+            }
+        } catch (_: Exception) {
+            // Preserve the original content if it is malformed; append rather
+            // than silently dropping either the old note or the new entry.
+            previousBody + separator + newEntry
+        }
+    }
+
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
 }
