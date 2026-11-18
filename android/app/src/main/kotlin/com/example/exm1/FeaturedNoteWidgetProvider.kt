@@ -136,8 +136,13 @@ class FeaturedNoteWidgetProvider : AppWidgetProvider() {
             manager.updateAppWidget(widgetId, views)
         }
 
+        /**
+         * Treat both the 20-hyphen separator and the 79-hyphen Quick Note
+         * separator as entry boundaries. Any standalone separator line with
+         * at least 20 hyphens is recognized.
+         */
         private fun pickRandomEntry(body: String): String {
-            val separatorRegex = Regex("(?m)^\\s*-{10,}\\s*$")
+            val separatorRegex = Regex("(?m)^\\s*-{20,}\\s*$")
             val entries = body.split(separatorRegex)
                 .map { it.trim() }
                 .filter { it.isNotBlank() }
