@@ -194,10 +194,26 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && !loading) {
+      // A native Android screen (such as Quick Note) may have changed the
+      // SharedPreferences file while this Flutter page stayed in memory.
+      // Reload the notebook instead of only rebuilding the old in-memory list.
+      _reloadNotesFromStorage();
+    }
+  }
+
+  Future<void> _reloadNotesFromStorage() async {
+    try {
+      final latestNotes = await repository.loadNotes();
+      if (!mounted) return;
       setState(() {
+        notes
+          ..clear()
+          ..addAll(latestNotes);
+        featuredNote = _randomNote(latestNotes, excludeId: featuredNote?.id);
         _randomizeNoteBackgrounds();
-        featuredNote = _randomNote(notes, excludeId: featuredNote?.id);
       });
+    } catch (error, stackTrace) {
+      debugPrint('Notebook refresh failed: $error\\n$stackTrace');
     }
   }
 
