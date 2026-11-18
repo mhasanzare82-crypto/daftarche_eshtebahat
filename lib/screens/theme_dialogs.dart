@@ -48,7 +48,7 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
   late int widgetBackgroundColor;
   double hue = 220, saturation = .06, brightness = .78;
   bool addingFonts = false;
-  static const builtInFonts = ['sans-serif'];
+  static const builtInFonts = ['Estedad'];
 
   @override
   void initState() {
@@ -115,7 +115,7 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
           Expanded(child: ListView(padding: const EdgeInsets.all(16), children: [
             _sectionTitle('۱. فونت‌ها', Icons.font_download_outlined),
             const SizedBox(height: 6),
-            const Text('فونت پیش‌فرض برنامه فقط sans-serif است. در صورت نیاز می‌توانی فونت دلخواه خودت را اضافه کنی.', style: TextStyle(fontSize: 12, color: Colors.black54)),
+            const Text('فونت پیش‌فرض برنامه استعداد (Estedad) است. در صورت نیاز می‌توانی فونت دلخواه خودت را هم اضافه کنی.', style: TextStyle(fontSize: 12, color: Colors.black54)),
             const SizedBox(height: 10),
             SizedBox(width: double.infinity, child: OutlinedButton.icon(
               onPressed: addingFonts ? null : addFonts,
@@ -135,7 +135,7 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
             const Text('این گزینه فونت منوها، دکمه‌ها، عنوان‌ها و نوشته‌های محیط برنامه را تغییر می‌دهد و روی فونت داخل یادداشت‌ها اثری ندارد.', style: TextStyle(fontSize: 12, color: Colors.black54)),
             const SizedBox(height: 8),
             DropdownButtonFormField<String>(
-              initialValue: fonts.contains(appFontFamily) ? appFontFamily : 'sans-serif',
+              initialValue: fonts.contains(appFontFamily) ? appFontFamily : 'Estedad',
               decoration: const InputDecoration(labelText: 'فونت رابط کاربری', border: OutlineInputBorder()),
               items: fonts.map((family) => DropdownMenuItem<String>(
                 value: family,
