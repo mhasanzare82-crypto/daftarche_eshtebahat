@@ -93,6 +93,8 @@ class FeaturedNoteWidgetProvider : AppWidgetProvider() {
             views.setTextColor(R.id.featured_note_body, widgetText)
             views.setTextColor(R.id.featured_note_next, widgetHeading)
             views.setTextColor(R.id.featured_note_heading, widgetText)
+            // Keep the content area visible in launcher RemoteViews layouts.
+            views.setViewVisibility(R.id.featured_note_body, android.view.View.VISIBLE)
 
             if (selected == null) {
                 views.setViewVisibility(R.id.featured_note_title, android.view.View.GONE)
