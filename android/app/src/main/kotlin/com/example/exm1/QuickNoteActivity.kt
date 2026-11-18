@@ -110,7 +110,7 @@ class QuickNoteActivity : Activity() {
             if (widgetNote != null) {
                 val previousBody = widgetNote.optString("body")
                 val separator = "\n-------------------------------------------------------------------------------\n"
-                widgetNote.put("body", if (previousBody.isBlank()) body else "$previousBody$separator$body")
+                widgetNote.put("body", appendEntry(previousBody, body))
                 widgetNote.put("updated", now)
             } else {
                 val note = JSONObject().apply {
@@ -156,7 +156,7 @@ class QuickNoteActivity : Activity() {
      * Flutter Quill or the legacy rich-text editor.
      */
     private fun appendEntry(previousBody: String, newEntry: String): String {
-        val separator = "\\n-------------------------------------------------------------------------------\\n"
+        val separator = "\n-------------------------------------------------------------------------------\n"
         if (previousBody.isBlank()) return newEntry
 
         val quillMarker = "__quill_note_v1__"
@@ -165,7 +165,7 @@ class QuickNoteActivity : Activity() {
             when {
                 previousBody.startsWith(quillMarker) -> {
                     val ops = JSONArray(previousBody.removePrefix(quillMarker))
-                    ops.put(JSONObject().put("insert", separator + newEntry + "\\n"))
+                    ops.put(JSONObject().put("insert", separator + newEntry + "\n"))
                     quillMarker + ops.toString()
                 }
                 previousBody.startsWith(legacyMarker) -> {
