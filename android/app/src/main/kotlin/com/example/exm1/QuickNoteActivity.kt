@@ -165,7 +165,7 @@ class QuickNoteActivity : Activity() {
             when {
                 previousBody.startsWith(quillMarker) -> {
                     val ops = JSONArray(previousBody.removePrefix(quillMarker))
-                    ops.put(JSONObject().put("insert", separator + newEntry))
+                    ops.put(JSONObject().put("insert", separator + newEntry + "\\n"))
                     quillMarker + ops.toString()
                 }
                 previousBody.startsWith(legacyMarker) -> {
