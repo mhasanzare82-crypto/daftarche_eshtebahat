@@ -173,7 +173,8 @@ class FeaturedNoteWidgetProvider : AppWidgetProvider() {
                     else -> body
                 }
             } catch (_: Exception) {
-                body.removePrefix(quillMarker).removePrefix(legacyMarker)
+                // Never expose serialized rich-text JSON as if it were note text.
+                "متن قالب‌بندی‌شده این یادداشت قابل خواندن نیست."
             }
         }
     }
