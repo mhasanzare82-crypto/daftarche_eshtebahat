@@ -284,15 +284,6 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
           }
         } catch (_) { /* An unavailable custom font must not block opening the notebook. */ }
       }
-      // Load the bundled Estedad font before applying the app-wide theme.
-      try {
-        final estedadBytes = await rootBundle.load('assets/fonts/Estedad[wght].ttf');
-        final estedadLoader = FontLoader('Estedad')
-          ..addFont(Future.value(estedadBytes));
-        await estedadLoader.load();
-      } catch (error) {
-        debugPrint('Bundled Estedad font could not be loaded: $error');
-      }
       appInterfaceFontFamily.value = customFonts.containsKey(loadedAppFontFamily)
           ? loadedAppFontFamily
           : 'Estedad';
