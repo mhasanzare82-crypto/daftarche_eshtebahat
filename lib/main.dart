@@ -510,7 +510,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
         .map((line) => line.trim()).where((line) => line.isNotEmpty).toList();
   }
 
-  Future<void> edit([Note? note], {String? searchQuery}) async {
+  Future<void> edit({Note? note, String? searchQuery}) async {
     final availableThemes = themes.where((theme) => randomThemeNames.contains(theme.name)).toList();
     final themePool = availableThemes.isEmpty ? (themes.isEmpty ? defaultThemes : themes) : availableThemes;
     final selected=note==null?themePool[Random().nextInt(themePool.length)]:NoteTheme('فعلی',note.themeColor,note.themeTextColor,note.themeFontFamily);
@@ -1001,7 +1001,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
                 borderRadius: BorderRadius.circular(22),
                 clipBehavior: Clip.antiAlias,
                 child: InkWell(
-                  onTap: () => edit(featuredNote),
+                  onTap: () => edit(note: featuredNote),
                   child: Container(
                     width: double.infinity,
                     padding: const EdgeInsets.fromLTRB(18, 15, 18, 17),
@@ -1129,7 +1129,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
             final backgroundColor = _backgroundColorFor(n);
             final query = search.text.trim();
             final matchingLines = query.isEmpty ? <String>[] : _matchingLines(n, query);
-            return Card(elevation:0,color:Color(backgroundColor),child:InkWell(onTap:()=>edit(n,searchQuery:query.isEmpty?null:query),child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            return Card(elevation:0,color:Color(backgroundColor),child:InkWell(onTap:()=>edit(note: n, searchQuery: query.isEmpty ? null : query),child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
               Row(children:[if(pinnedNoteIds.contains(n.id))const Padding(padding:EdgeInsets.only(left:6),child:Icon(Icons.push_pin_rounded,size:17)),Expanded(child:Text(n.title.isEmpty?'بدون عنوان':n.title,style:TextStyle(fontWeight:FontWeight.bold,fontSize:16,color:Color(n.themeTextColor),fontFamily:n.themeFontFamily))),IconButton(tooltip:'گزینه‌های یادداشت',onPressed:()=>showNoteMenu(n),icon:const Icon(Icons.more_vert))]),
               if(query.isNotEmpty && matchingLines.isNotEmpty) ...matchingLines.take(6).map((line)=>Padding(padding:const EdgeInsets.only(top:6),child:Text(line,style:TextStyle(color:Color(n.themeTextColor),fontFamily:n.themeFontFamily,fontWeight:FontWeight.w600)))),
               if(query.isNotEmpty && matchingLines.isEmpty && n.title.toLowerCase().contains(query.toLowerCase()))Text('عنوان: ${n.title}',style:TextStyle(color:Color(n.themeTextColor),fontFamily:n.themeFontFamily,fontWeight:FontWeight.w600)),
