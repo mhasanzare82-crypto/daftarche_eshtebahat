@@ -4,7 +4,6 @@ import '../models/note.dart';
 import '../widgets/home_widget_sync.dart';
 
 /// Single persistence boundary for notebook data.
-/// Keeps the existing SharedPreferences keys to preserve user data.
 class NotebookRepository {
   static const _notesKey = 'notebook_notes';
   static const _themesKey = 'notebook_themes';
@@ -21,10 +20,11 @@ class NotebookRepository {
 
   Future<List<Note>> loadNotes() async {
     final prefs = await SharedPreferences.getInstance();
-    // Quick Note writes through Android SharedPreferences directly. Reload the
-    // plugin cache before reading so Flutter sees native writes immediately.
     await prefs.reload();
-    return _decodeList(prefs.getString(_notesKey), Note.fromJson);
+    final notes = _decodeList(prefs.getString(_notesKey), Note.fromJson);
+    // Rehydrate the native widget from the canonical notebook on app startup.
+    await _syncDailyReminder(prefs, notes);
+    return notes;
   }
 
   Future<List<NoteTheme>> loadThemes() async {
@@ -46,16 +46,21 @@ class NotebookRepository {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_widgetNoteIdsKey);
     if (raw == null || raw.isEmpty) return <String>[];
-    try { return List<String>.from(jsonDecode(raw) as List); }
-    catch (_) { return <String>[]; }
+    try {
+      return List<String>.from(jsonDecode(raw) as List);
+    } catch (_) {
+      return <String>[];
+    }
   }
 
   Future<void> saveWidgetNoteIds(List<String> values) async {
     final prefs = await SharedPreferences.getInstance();
-    if (!await prefs.setString(_widgetNoteIdsKey, jsonEncode(values))) {
+    final uniqueIds = values.where((id) => id.isNotEmpty).toSet().toList();
+    if (!await prefs.setString(_widgetNoteIdsKey, jsonEncode(uniqueIds))) {
       throw StateError('Unable to persist widget note selection');
     }
-    await HomeWidgetSync.saveWidgetSelection(values);
+    final notes = _decodeList(prefs.getString(_notesKey), Note.fromJson);
+    await _syncDailyReminder(prefs, notes);
   }
 
   Future<List<String>> loadPinnedFolderIds() async {
@@ -80,12 +85,18 @@ class NotebookRepository {
 
   Future<List<int>> loadTextColorPalette() async {
     final prefs = await SharedPreferences.getInstance();
-    return (prefs.getStringList(_textColorPaletteKey) ?? <String>[]).map((value) => int.tryParse(value)).whereType<int>().toList();
+    return (prefs.getStringList(_textColorPaletteKey) ?? <String>[])
+        .map((value) => int.tryParse(value))
+        .whereType<int>()
+        .toList();
   }
 
   Future<void> saveTextColorPalette(List<int> values) async {
     final prefs = await SharedPreferences.getInstance();
-    if (!await prefs.setStringList(_textColorPaletteKey, values.map((value) => value.toString()).toList())) {
+    if (!await prefs.setStringList(
+      _textColorPaletteKey,
+      values.map((value) => value.toString()).toList(),
+    )) {
       throw StateError('Unable to persist text color palette');
     }
   }
@@ -129,21 +140,19 @@ class NotebookRepository {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_fontsKey);
     if (raw == null || raw.isEmpty) return <String, String>{};
-    try { return Map<String, String>.from(jsonDecode(raw) as Map); }
-    catch (_) { return <String, String>{}; }
+    try {
+      return Map<String, String>.from(jsonDecode(raw) as Map);
+    } catch (_) {
+      return <String, String>{};
+    }
   }
 
   Future<void> saveNotes(List<Note> values) async {
-    // Quick Note writes directly from its native Android Activity. If Flutter
-    // was already running in the background, its in-memory list can be stale.
-    // Merge the latest native widget entry before writing the full notebook so
-    // a later Flutter save cannot silently overwrite text just captured there.
     final prefs = await SharedPreferences.getInstance();
     final storedNotes = _decodeList(prefs.getString(_notesKey), Note.fromJson);
-    final quickNotes = storedNotes
+    final latestQuickNote = storedNotes
         .where((note) => note.id == _quickWidgetNoteId)
-        .toList();
-    final latestQuickNote = quickNotes.isEmpty ? null : quickNotes.first;
+        .firstOrNull;
     final notesToSave = List<Note>.of(values);
     if (latestQuickNote != null) {
       final currentIndex = notesToSave.indexWhere(
@@ -151,20 +160,47 @@ class NotebookRepository {
       );
       if (currentIndex == -1) {
         notesToSave.add(latestQuickNote);
-      } else if (latestQuickNote.updated.isAfter(notesToSave[currentIndex].updated)) {
+      } else if (latestQuickNote.updated.isAfter(
+        notesToSave[currentIndex].updated,
+      )) {
         notesToSave[currentIndex] = latestQuickNote;
       }
     }
-    await _save(_notesKey, notesToSave.map((e) => e.toJson()).toList());
+    await _save(_notesKey, notesToSave.map((note) => note.toJson()).toList());
+    await _syncDailyReminder(prefs, notesToSave);
     await HomeWidgetSync.refresh();
   }
 
-  Future<void> saveThemes(List<NoteTheme> values) => _save(_themesKey, values.map((e) => e.toJson()).toList());
+  Future<void> _syncDailyReminder(
+    SharedPreferences prefs,
+    List<Note> notes,
+  ) async {
+    final rawIds = prefs.getString(_widgetNoteIdsKey);
+    List<String> selectedIds = <String>[];
+    if (rawIds != null && rawIds.isNotEmpty) {
+      try {
+        selectedIds = List<String>.from(jsonDecode(rawIds) as List);
+      } catch (_) {
+        selectedIds = <String>[];
+      }
+    }
+    final selectedNotes = notes
+        .where((note) => selectedIds.contains(note.id))
+        .map((note) => note.toJson())
+        .toList();
+    await HomeWidgetSync.syncDailyReminder(selectedNotes);
+  }
+
+  Future<void> saveThemes(List<NoteTheme> values) =>
+      _save(_themesKey, values.map((e) => e.toJson()).toList());
+
   Future<void> saveFolders(List<NoteFolder> values) async {
     await _save(_foldersKey, values.map((e) => e.toJson()).toList());
     await HomeWidgetSync.refresh();
   }
-  Future<void> saveCustomFonts(Map<String, String> values) => _save(_fontsKey, values);
+
+  Future<void> saveCustomFonts(Map<String, String> values) =>
+      _save(_fontsKey, values);
 
   Future<void> _save(String key, Object value) async {
     final prefs = await SharedPreferences.getInstance();
@@ -172,12 +208,20 @@ class NotebookRepository {
     if (!success) throw StateError('Unable to persist notebook data: $key');
   }
 
-  List<T> _decodeList<T>(String? raw, T Function(Map<String, dynamic>) fromJson) {
+  List<T> _decodeList<T>(
+    String? raw,
+    T Function(Map<String, dynamic>) fromJson,
+  ) {
     if (raw == null || raw.isEmpty) return <T>[];
     try {
       final decoded = jsonDecode(raw);
       if (decoded is! List) return <T>[];
-      return decoded.whereType<Map>().map((item) => fromJson(Map<String, dynamic>.from(item))).toList();
-    } catch (_) { return <T>[]; }
+      return decoded
+          .whereType<Map>()
+          .map((item) => fromJson(Map<String, dynamic>.from(item)))
+          .toList();
+    } catch (_) {
+      return <T>[];
+    }
   }
 }
