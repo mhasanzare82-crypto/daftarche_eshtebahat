@@ -51,7 +51,7 @@ class DailyWidgetProvider:AppWidgetProvider(){
    for(i in 0 until ns.length()){val n=ns.optJSONObject(i)?:continue;if(n.optString("id") !in ids)continue
     val title=n.optString("title").ifBlank{"بدون عنوان"};val body=plain(n.optString("body"))
     val chunks=body.split(Regex("(?m)^[ \\t]*-{20,}[ \\t]*$")).map{it.trim()}.filter{it.isNotEmpty()}
-    if(chunks.isEmpty()){if(body.isNotBlank())result.add(Entry(title,body.trim()))}else chunks.forEach{result.add(Entry(title,it)}
+    if(chunks.isEmpty()){if(body.isNotBlank())result.add(Entry(title,body.trim()))}else chunks.forEach { chunk -> result.add(Entry(title, chunk)) }
    }
    return result
   }
