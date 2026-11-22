@@ -961,7 +961,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
           title: const Text('افزودن / برداشتن از ویجت یادآوری'),
           onTap: () async {
             Navigator.pop(sheetContext);
-            final added = await DailyWidgetSettingsScreen.toggleNote(note);
+            final added = await toggleDailyWidgetNote(note);
             if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(added ? 'یادداشت به ویجت اضافه شد' : 'یادداشت از ویجت برداشته شد')),

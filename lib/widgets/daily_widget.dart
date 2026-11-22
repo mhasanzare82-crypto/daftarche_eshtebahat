@@ -6,6 +6,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/note.dart';
 import '../widgets/home_widget_sync.dart';
 
+const _dailyWidgetSelectedIdsKey = 'daily_widget_selected_note_ids';
+
+Future<bool> toggleDailyWidgetNote(Note note) async {
+  final prefs = await SharedPreferences.getInstance();
+  final ids = (prefs.getStringList(_dailyWidgetSelectedIdsKey) ?? <String>[]).toSet();
+  final wasSelected = ids.remove(note.id);
+  if (!wasSelected) ids.add(note.id);
+  await prefs.setStringList(_dailyWidgetSelectedIdsKey, ids.toList());
+  await HomeWidgetSync.refresh();
+  return !wasSelected;
+}
+
 /// Selection, color, and typography controls for the Daily Reminder widget.
 class DailyWidgetSettingsScreen extends StatefulWidget {
   final List<Note> notes;
@@ -18,7 +30,6 @@ class DailyWidgetSettingsScreen extends StatefulWidget {
 }
 
 class _DailyWidgetSettingsScreenState extends State<DailyWidgetSettingsScreen> {
-  static const _selectedIdsKey = 'daily_widget_selected_note_ids';
   static const _backgroundKey = 'daily_widget_background_color';
   static const _textColorKey = 'daily_widget_text_color';
   static const _fontSizeKey = 'daily_widget_font_size';
@@ -42,7 +53,7 @@ class _DailyWidgetSettingsScreenState extends State<DailyWidgetSettingsScreen> {
     if (!mounted) return;
 
     setState(() {
-      _selectedIds = (prefs.getStringList(_selectedIdsKey) ?? <String>[]).toSet();
+      _selectedIds = (prefs.getStringList(_dailyWidgetSelectedIdsKey) ?? <String>[]).toSet();
       _background = Color(prefs.getInt(_backgroundKey) ?? _background.toARGB32());
       _textColor = Color(prefs.getInt(_textColorKey) ?? _textColor.toARGB32());
       _fontSize = (prefs.getDouble(_fontSizeKey) ??
@@ -57,23 +68,12 @@ class _DailyWidgetSettingsScreenState extends State<DailyWidgetSettingsScreen> {
 
   Future<void> _saveSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_selectedIdsKey, _selectedIds.toList());
+    await prefs.setStringList(_dailyWidgetSelectedIdsKey, _selectedIds.toList());
     await prefs.setInt(_backgroundKey, _background.toARGB32());
     await prefs.setInt(_textColorKey, _textColor.toARGB32());
     await prefs.setDouble(_fontSizeKey, _fontSize);
     await prefs.setString(_fontStyleKey, _fontStyle);
     await HomeWidgetSync.refresh();
-  }
-
-  /// Toggle one note from the note menu. Only selected notes are eligible.
-  static Future<bool> toggleNote(Note note) async {
-    final prefs = await SharedPreferences.getInstance();
-    final ids = (prefs.getStringList(_selectedIdsKey) ?? <String>[]).toSet();
-    final wasSelected = ids.remove(note.id);
-    if (!wasSelected) ids.add(note.id);
-    await prefs.setStringList(_selectedIdsKey, ids.toList());
-    await HomeWidgetSync.refresh();
-    return !wasSelected;
   }
 
   String _plainText(String body) {
