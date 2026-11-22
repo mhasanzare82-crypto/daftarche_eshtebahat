@@ -1,70 +1,63 @@
 package com.example.exm1
 
-import org.json.JSONArray
 import android.os.Bundle
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
+    companion object {
+        private const val DAILY_REMINDER_CHANNEL =
+            "com.mhasanzare82.daftarcheeshtebahat/daily_reminder_widget"
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
-            "com.mhasanzare82.daftarcheeshtebahat/widget"
+            DAILY_REMINDER_CHANNEL
         ).setMethodCallHandler { call, result ->
             when (call.method) {
-                "setWidgetNoteSelection" -> {
-                    val ids = call.argument<List<String>>("ids")
-                        ?.filter { it.isNotBlank() }
-                        ?.distinct()
-                        ?: emptyList()
-                    val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
-                    val serializedIds = JSONArray(ids).toString()
-                    val saved = prefs.edit()
-                        .putString("flutter.notebook_widget_note_ids", serializedIds)
-                        .commit()
-                    if (!saved) {
-                        result.error("WIDGET_SELECTION_SAVE_FAILED", "ذخیره انتخاب‌های ویجت انجام نشد", null)
+                "syncDailyReminder" -> {
+                    val payload = call.argument<String>("payload")
+                    if (payload == null) {
+                        result.error(
+                            "INVALID_DAILY_REMINDER_PAYLOAD",
+                            "محتوای ویجت ارسال نشده است",
+                            null
+                        )
                     } else {
-                        val notes = try {
-                            JSONArray(prefs.getString("flutter.notebook_notes", "[]") ?: "[]")
-                        } catch (_: Exception) {
-                            JSONArray()
-                        }
-                        val availableIds = (0 until notes.length()).mapNotNull { index ->
-                            notes.optJSONObject(index)?.optString("id")?.takeIf { it.isNotBlank() }
-                        }.toSet()
-                        val matchedCount = ids.count { it in availableIds }
-
-                        // Refresh only after native read-back confirms the selection
-                        // has been committed to the same preferences file the widget reads.
-                        NotebookWidgetProvider.refreshAll(applicationContext)
-                        FeaturedNoteWidgetProvider.refreshAll(
-                            applicationContext,
-                            resetSelection = true
-                        )
-                        QuickNoteWidgetProvider.refreshAll(applicationContext)
-                        result.success(
-                            mapOf(
-                                "selectedCount" to ids.size,
-                                "matchedCount" to matchedCount
+                        try {
+                            val selectedCount = DailyReminderWidgetProvider.syncData(
+                                applicationContext,
+                                payload
                             )
-                        )
+                            NotebookWidgetProvider.refreshAll(applicationContext)
+                            QuickNoteWidgetProvider.refreshAll(applicationContext)
+                            result.success(
+                                mapOf(
+                                    "selectedCount" to selectedCount,
+                                    "updated" to true
+                                )
+                            )
+                        } catch (error: Exception) {
+                            result.error(
+                                "DAILY_REMINDER_SYNC_FAILED",
+                                error.message ?: "همگام‌سازی ویجت انجام نشد",
+                                null
+                            )
+                        }
                     }
                 }
-                "refreshWidget" -> {
+
+                "refreshWidgets" -> {
+                    DailyReminderWidgetProvider.refreshAll(applicationContext)
                     NotebookWidgetProvider.refreshAll(applicationContext)
-                    FeaturedNoteWidgetProvider.refreshAll(applicationContext)
                     QuickNoteWidgetProvider.refreshAll(applicationContext)
                     result.success(null)
                 }
-                "refreshWidgetSelection" -> {
-                    NotebookWidgetProvider.refreshAll(applicationContext)
-                    FeaturedNoteWidgetProvider.refreshAll(applicationContext, resetSelection = true)
-                    QuickNoteWidgetProvider.refreshAll(applicationContext)
-                    result.success(null)
-                }
+
                 else -> result.notImplemented()
             }
         }
