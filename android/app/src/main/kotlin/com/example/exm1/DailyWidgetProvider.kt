@@ -50,8 +50,14 @@ class DailyWidgetProvider:AppWidgetProvider(){
    val ids=(0 until ss.length()).map{ss.optString(it)}.toSet();val result=mutableListOf<Entry>()
    for(i in 0 until ns.length()){val n=ns.optJSONObject(i)?:continue;if(n.optString("id") !in ids)continue
     val title=n.optString("title").ifBlank{"بدون عنوان"};val body=plain(n.optString("body"))
-    val chunks=body.split(Regex("(?m)^[ \\t]*-{20,}[ \\t]*$")).map{it.trim()}.filter{it.isNotEmpty()}
-    if(chunks.isEmpty()){if(body.isNotBlank())result.add(Entry(title,body.trim()))}else chunks.forEach { chunk -> result.add(Entry(title, chunk)) }
+    val separator=Regex("(?m)^[ \\t]*-{20,}[ \\t]*$")
+    val chunks=body.split(separator).toMutableList()
+    val lines=body.trimEnd().split('\\n')
+    val begins=lines.firstOrNull()?.let{Regex("^[ \\t]*-{20,}[ \\t]*$").matches(it)}?:false
+    val ends=lines.lastOrNull()?.let{Regex("^[ \\t]*-{20,}[ \\t]*$").matches(it)}?:false
+    if(!begins&&chunks.isNotEmpty())chunks.removeAt(0)
+    if(!ends&&chunks.isNotEmpty())chunks.removeAt(chunks.lastIndex)
+    chunks.map{it.trim()}.filter{it.isNotEmpty()}.forEach{result.add(Entry(title,it))}
    }
    return result
   }
