@@ -985,13 +985,37 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       return pinOrder!=0?pinOrder:a.name.compareTo(b.name);
     });
     return Directionality(textDirection:TextDirection.rtl,child:Scaffold(
-IconButton(
+      appBar: AppBar(
+        title: const Text('دفترچه اشتباهات', style: TextStyle(fontWeight: FontWeight.bold)),
+        actions: [
+          PopupMenuButton<String>(
+            tooltip: 'ورود و خروجی فایل‌ها',
+            onSelected: (value) {
+              if (value == 'import') importDocx();
+              if (value == 'export') exportDocx(notes);
+              if (value == 'backup') createBackup();
+              if (value == 'restore') restoreBackup();
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(value: 'import', child: ListTile(leading: Icon(Icons.file_open), title: Text('ورود گروهی DOCX'))),
+              PopupMenuItem(value: 'export', child: ListTile(leading: Icon(Icons.file_download), title: Text('خروجی گروهی DOCX'))),
+              PopupMenuDivider(),
+              PopupMenuItem(value: 'backup', child: ListTile(leading: Icon(Icons.backup_outlined), title: Text('ساخت فایل پشتیبان'))),
+              PopupMenuItem(value: 'restore', child: ListTile(leading: Icon(Icons.settings_backup_restore), title: Text('بازیابی فایل پشتیبان'))),
+            ],
+          ),
+          IconButton(
             tooltip: 'تنظیم ویجت یادآوری',
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(builder: (_) => DailyWidgetSettingsScreen(notes: notes)),
             ),
             icon: const Icon(Icons.auto_awesome_outlined),
           ),
+          IconButton(tooltip: 'ایجاد پوشه', onPressed: createFolder, icon: const Icon(Icons.create_new_folder_outlined)),
+          IconButton(tooltip: 'مدیریت تم‌ها', onPressed: manageThemes, icon: const Icon(Icons.palette_outlined)),
+          IconButton(onPressed: () => edit(), icon: const Icon(Icons.add_rounded)),
+        ],
+      ),
       floatingActionButton:FloatingActionButton.extended(onPressed:()=>edit(),icon:const Icon(Icons.edit_note_rounded),label:const Text('یادداشت جدید')),
       body:SafeArea(child:Column(children:[
         if(!loading && featuredNote != null)

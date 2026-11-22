@@ -28,7 +28,7 @@ class _DailyWidgetSettingsScreenState extends State<DailyWidgetSettingsScreen> {
   }
   Future<void> _save() async {
     final p=await SharedPreferences.getInstance(); await p.setStringList(_idsKey,selected.toList());
-    await p.setInt(_bgKey,background.value); await p.setInt(_fgKey,foreground.value);
+    await p.setInt(_bgKey,background.toARGB32()); await p.setInt(_fgKey,foreground.toARGB32());
     await p.setDouble(_sizeKey,size); await p.setString(_styleKey,style); await HomeWidgetSync.refresh();
   }
   static Future<bool> toggleNote(Note note) async {
