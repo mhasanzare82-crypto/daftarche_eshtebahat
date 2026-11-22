@@ -45,18 +45,6 @@
         </receiver>
 
         <receiver
-            android:name=".FeaturedNoteWidgetProvider"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.example.exm1.ACTION_NEXT_FEATURED_NOTE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/featured_note_widget_info" />
-        </receiver>
-
-        <receiver
             android:name=".NotebookWidgetProvider"
             android:exported="true">
             <intent-filter>
