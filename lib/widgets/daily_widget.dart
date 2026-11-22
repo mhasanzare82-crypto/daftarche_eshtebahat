@@ -47,7 +47,15 @@ class _DailyWidgetSettingsScreenState extends State<DailyWidgetSettingsScreen> {
   }
   List<String> _parts(Note n) {
     final body = _plain(n.body);
-    final separator = RegExp(r'(?m)^[ \\t]*-{20,}[ \\t]*
+    final separator = RegExp(r'(?m)^[ \t]*-{20,}[ \t]*$');
+    final chunks = body.split(separator);
+    final lines = body.trimRight().split('\n');
+    final begins = lines.isNotEmpty && RegExp(r'^[ \t]*-{20,}[ \t]*$').hasMatch(lines.first);
+    final ends = lines.isNotEmpty && RegExp(r'^[ \t]*-{20,}[ \t]*$').hasMatch(lines.last);
+    if (!begins && chunks.isNotEmpty) chunks.removeAt(0);
+    if (!ends && chunks.isNotEmpty) chunks.removeLast();
+    return chunks.map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+  }
   Widget _rgbSlider(String label,Color c,bool isBg,int channel){
     final v=channel==0?c.red:channel==1?c.green:c.blue;
     return ListTile(dense:true,title:Text(label),subtitle:Slider(min:0,max:255,divisions:255,value:v.toDouble(),onChanged:(x){

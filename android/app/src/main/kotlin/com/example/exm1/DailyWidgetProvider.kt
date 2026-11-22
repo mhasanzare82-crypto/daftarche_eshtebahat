@@ -52,7 +52,7 @@ class DailyWidgetProvider:AppWidgetProvider(){
     val title=n.optString("title").ifBlank{"بدون عنوان"};val body=plain(n.optString("body"))
     val separator=Regex("(?m)^[ \\t]*-{20,}[ \\t]*$")
     val chunks=body.split(separator).toMutableList()
-    val lines=body.trimEnd().split('\\n')
+    val lines=body.trimEnd().split('\n')
     val begins=lines.firstOrNull()?.let{Regex("^[ \\t]*-{20,}[ \\t]*$").matches(it)}?:false
     val ends=lines.lastOrNull()?.let{Regex("^[ \\t]*-{20,}[ \\t]*$").matches(it)}?:false
     if(!begins&&chunks.isNotEmpty())chunks.removeAt(0)
