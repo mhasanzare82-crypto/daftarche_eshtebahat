@@ -27,6 +27,7 @@ class FeaturedNoteWidgetProvider : AppWidgetProvider() {
         private const val WIDGET_NOTE_IDS_KEY = "flutter.notebook_widget_note_ids"
         private const val WIDGET_PREFS = "featured_note_widget"
         private const val ACTION_NEXT_NOTE = "com.example.exm1.ACTION_NEXT_FEATURED_NOTE"
+        private const val TAG = "FeaturedNoteWidget"
 
         fun refreshAll(
             context: Context,
@@ -59,13 +60,16 @@ class FeaturedNoteWidgetProvider : AppWidgetProvider() {
                 val ids = JSONArray(raw)
                 (0 until ids.length()).map { ids.optString(it) }
             } catch (_: Exception) { emptyList() }
-            // Keep the widget useful if the saved selection is empty or stale.
-            // Prefer explicitly selected notes, but fall back to the notebook notes
-            // instead of leaving the daily reminder widget blank.
-            val selectedNotes = selectedIds.mapNotNull { id ->
+            // Only explicitly selected notes are eligible for this widget.
+            val selectedNotes = selectedIds.distinct().mapNotNull { id ->
                 allNotes.firstOrNull { it.optString("id") == id }
             }
-            val available = selectedNotes.ifEmpty { allNotes }
+            // This widget is opt-in: never substitute unrelated notebook notes
+            // when the user has not selected a note or a stored ID is stale.
+            val available = selectedNotes
+            Log.d(TAG, "refresh widgetId=" + widgetId + " selectedIds=" + selectedIds +
+                " matchedIds=" + selectedNotes.map { it.optString("id") } +
+                " storedNotes=" + allNotes.size + " chooseNext=" + chooseNext + " reset=" + resetSelection)
             val widgetPrefs = context.getSharedPreferences(WIDGET_PREFS, Context.MODE_PRIVATE)
             val key = "featured_note_$widgetId"
             val previousId = if (resetSelection) null else widgetPrefs.getString(key, null)
@@ -103,9 +107,17 @@ class FeaturedNoteWidgetProvider : AppWidgetProvider() {
 
             if (selected == null) {
                 views.setViewVisibility(R.id.featured_note_title, android.view.View.GONE)
-                views.setTextViewText(R.id.featured_note_body, "از گزینه‌های هر یادداشت، «افزودن به ویجت» را بزن.")
+                val emptyMessage = if (selectedIds.isEmpty()) {
+                    "از منوی یادداشت، «افزودن به ویجت» را انتخاب کن."
+                } else {
+                    "یادداشت انتخاب‌شده پیدا نشد؛ دوباره آن را به ویجت اضافه کن."
+                }
+                views.setTextViewText(R.id.featured_note_body, emptyMessage)
                 views.setViewVisibility(R.id.featured_note_hint, android.view.View.VISIBLE)
-                views.setTextViewText(R.id.featured_note_hint, "نوشته‌ای برای ویجت انتخاب نشده")
+                views.setTextViewText(
+                    R.id.featured_note_hint,
+                    if (selectedIds.isEmpty()) "هنوز یادداشتی انتخاب نشده" else "شناسهٔ یادداشت با دفترچه مطابقت ندارد"
+                )
             } else {
                 val title = selected.optString("title").ifBlank { "بدون عنوان" }
                 val fullBody = plainText(selected.optString("body"))
