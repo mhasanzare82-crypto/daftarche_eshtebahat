@@ -7,9 +7,7 @@ class ThemeManagerResult {
   final List<int> textColorPalette;
   final String appFontFamily;
   final String appThemeName;
-  final int widgetTextColor;
-  final int widgetBackgroundColor;
-  const ThemeManagerResult(this.themes, this.randomThemeNames, this.textColorPalette, this.appFontFamily, this.appThemeName, this.widgetTextColor, this.widgetBackgroundColor);
+  const ThemeManagerResult(this.themes, this.randomThemeNames, this.textColorPalette, this.appFontFamily, this.appThemeName);
 }
 
 class ThemeManagerDialog extends StatefulWidget {
@@ -19,8 +17,6 @@ class ThemeManagerDialog extends StatefulWidget {
   final List<int> initialTextColorPalette;
   final String initialAppFontFamily;
   final String initialAppThemeName;
-  final int initialWidgetTextColor;
-  final int initialWidgetBackgroundColor;
   final Future<List<String>> Function()? onAddCustomFont;
   const ThemeManagerDialog({
     super.key,
@@ -30,8 +26,6 @@ class ThemeManagerDialog extends StatefulWidget {
     this.initialTextColorPalette = const [],
     this.initialAppFontFamily = 'sans-serif',
     this.initialAppThemeName = 'دودی',
-    this.initialWidgetTextColor = 0xFFC4CCD6,
-    this.initialWidgetBackgroundColor = 0xFF242A32,
     this.onAddCustomFont,
   });
   @override
@@ -44,8 +38,6 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
   late List<int> textColorPalette;
   late String appFontFamily;
   late String appThemeName;
-  late int widgetTextColor;
-  late int widgetBackgroundColor;
   double hue = 220, saturation = .06, brightness = .78;
   bool addingFonts = false;
   static const builtInFonts = ['Estedad'];
@@ -58,8 +50,6 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
     textColorPalette = [...widget.initialTextColorPalette];
     appFontFamily = widget.initialAppFontFamily;
     appThemeName = widget.initialAppThemeName;
-    widgetTextColor = widget.initialWidgetTextColor;
-    widgetBackgroundColor = widget.initialWidgetBackgroundColor;
   }
 
   Color get selectedColor => HSVColor.fromAHSV(1, hue, saturation, brightness).toColor();
@@ -164,25 +154,7 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
             const SizedBox(height: 22),
             const Divider(),
             const SizedBox(height: 12),
-            _sectionTitle('۳. رنگ ویجت یادآوری‌های روزانه', Icons.widgets_outlined),
-            const SizedBox(height: 8),
-            const Text('رنگ انتخاب‌شده را با اسلایدرهای پایین تنظیم کن و برای متن یا پس‌زمینه اعمال کن.', style: TextStyle(fontSize: 12, color: Colors.black54)),
-            const SizedBox(height: 8),
-            Row(children: [
-              Expanded(child: OutlinedButton(
-                onPressed: () => setState(() => widgetTextColor = selectedColor.toARGB32()),
-                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Container(width: 18, height: 18, decoration: BoxDecoration(color: Color(widgetTextColor), shape: BoxShape.circle)), const SizedBox(width: 6), const Text('اعمال رنگ متن')]),
-              )),
-              const SizedBox(width: 8),
-              Expanded(child: OutlinedButton(
-                onPressed: () => setState(() => widgetBackgroundColor = selectedColor.toARGB32()),
-                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [Container(width: 18, height: 18, decoration: BoxDecoration(color: Color(widgetBackgroundColor), shape: BoxShape.circle)), const SizedBox(width: 6), const Text('اعمال پس‌زمینه')]),
-              )),
-            ]),
-            const SizedBox(height: 22),
-            const Divider(),
-            const SizedBox(height: 12),
-            _sectionTitle('۴. انتخاب رنگ', Icons.palette_outlined),
+            _sectionTitle('۳. انتخاب رنگ', Icons.palette_outlined),
             const SizedBox(height: 8),
             const Text('سه اسلایدر را تنظیم کن و سپس رنگ انتخاب‌شده را به پالت پس‌زمینه یا پالت رنگ متن اضافه کن.', style: TextStyle(fontSize: 12, color: Colors.black54)),
             const SizedBox(height: 12),
@@ -260,7 +232,7 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
             FilledButton.icon(
               onPressed: () {
                 final names = palette.map((item) => item.name).toList();
-                Navigator.pop(context, ThemeManagerResult([...palette], names, [...textColorPalette], appFontFamily, appThemeName, widgetTextColor, widgetBackgroundColor));
+                Navigator.pop(context, ThemeManagerResult([...palette], names, [...textColorPalette], appFontFamily, appThemeName));
               },
               icon: const Icon(Icons.save_outlined),
               label: const Text('ذخیره تنظیمات'),
