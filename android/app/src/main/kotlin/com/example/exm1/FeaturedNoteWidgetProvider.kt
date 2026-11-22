@@ -28,11 +28,15 @@ class FeaturedNoteWidgetProvider : AppWidgetProvider() {
         private const val WIDGET_PREFS = "featured_note_widget"
         private const val ACTION_NEXT_NOTE = "com.example.exm1.ACTION_NEXT_FEATURED_NOTE"
 
-        fun refreshAll(context: Context, chooseNext: Boolean = false) {
+        fun refreshAll(
+            context: Context,
+            chooseNext: Boolean = false,
+            resetSelection: Boolean = false
+        ) {
             val manager = AppWidgetManager.getInstance(context)
             val component = ComponentName(context, FeaturedNoteWidgetProvider::class.java)
             manager.getAppWidgetIds(component).forEach { id ->
-                updateOne(context, manager, id, chooseNext)
+                updateOne(context, manager, id, chooseNext, resetSelection)
             }
         }
 
@@ -40,7 +44,8 @@ class FeaturedNoteWidgetProvider : AppWidgetProvider() {
             context: Context,
             manager: AppWidgetManager,
             widgetId: Int,
-            chooseNext: Boolean
+            chooseNext: Boolean,
+            resetSelection: Boolean = false
         ) {
             val appPrefs = context.getSharedPreferences(PREFS_FILE, Context.MODE_PRIVATE)
             val notes = try {
@@ -63,7 +68,7 @@ class FeaturedNoteWidgetProvider : AppWidgetProvider() {
             val available = selectedNotes.ifEmpty { allNotes }
             val widgetPrefs = context.getSharedPreferences(WIDGET_PREFS, Context.MODE_PRIVATE)
             val key = "featured_note_$widgetId"
-            val previousId = widgetPrefs.getString(key, null)
+            val previousId = if (resetSelection) null else widgetPrefs.getString(key, null)
             val previous = available.firstOrNull { it.optString("id") == previousId }
             val selected = when {
                 available.isEmpty() -> null
