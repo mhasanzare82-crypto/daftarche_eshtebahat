@@ -50,6 +50,7 @@ jobs:
       - name: Run daily reminder widget unit tests
         run: |
           cd android
+          chmod +x gradlew
           ./gradlew :app:testDebugUnitTest
 
       - name: Analyze Dart code
