@@ -135,7 +135,6 @@ class QuickNoteActivity : Activity() {
             // failure must not be reported as a failed save after commit().
             listOf<() -> Unit>(
                 { NotebookWidgetProvider.refreshAll(this) },
-                { FeaturedNoteWidgetProvider.refreshAll(this) },
                 { QuickNoteWidgetProvider.refreshAll(this) }
             ).forEach { refresh ->
                 try { refresh() } catch (_: Exception) { /* Saved data remains safe. */ }
