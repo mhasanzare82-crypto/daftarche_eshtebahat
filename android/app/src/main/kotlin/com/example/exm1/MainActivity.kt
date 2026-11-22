@@ -19,6 +19,12 @@ class MainActivity : FlutterActivity() {
                     QuickNoteWidgetProvider.refreshAll(applicationContext)
                     result.success(null)
                 }
+                "refreshWidgetSelection" -> {
+                    NotebookWidgetProvider.refreshAll(applicationContext)
+                    FeaturedNoteWidgetProvider.refreshAll(applicationContext, resetSelection = true)
+                    QuickNoteWidgetProvider.refreshAll(applicationContext)
+                    result.success(null)
+                }
                 else -> result.notImplemented()
             }
         }
