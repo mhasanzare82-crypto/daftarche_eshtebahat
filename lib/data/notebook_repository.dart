@@ -55,7 +55,7 @@ class NotebookRepository {
     if (!await prefs.setString(_widgetNoteIdsKey, jsonEncode(values))) {
       throw StateError('Unable to persist widget note selection');
     }
-    await HomeWidgetSync.refresh(selectionChanged: true);
+    await HomeWidgetSync.saveWidgetSelection(values);
   }
 
   Future<List<String>> loadPinnedFolderIds() async {
