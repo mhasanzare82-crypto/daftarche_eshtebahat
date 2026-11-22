@@ -20,6 +20,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'models/note.dart';
 import 'data/notebook_repository.dart';
+import 'widgets/home_widget_sync.dart';
 import 'screens/theme_dialogs.dart';
 
 const String _quillNoteMarker = '__quill_note_v1__';
