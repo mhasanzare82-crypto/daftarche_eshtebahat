@@ -22,8 +22,8 @@ class _DailyWidgetSettingsScreenState extends State<DailyWidgetSettingsScreen> {
   @override void initState(){super.initState();_load();}
   Future<void> _load() async {
     final p=await SharedPreferences.getInstance(); if(!mounted)return;
-    setState((){selected=(p.getStringList(_idsKey)??[]).toSet(); background=Color(p.getInt(_bgKey)??background.value);
-      foreground=Color(p.getInt(_fgKey)??foreground.value); size=(p.getDouble(_sizeKey)??p.getInt(_sizeKey)?.toDouble()??16).clamp(12,28).toDouble();
+    setState((){selected=(p.getStringList(_idsKey)??[]).toSet(); background=Color(p.getInt(_bgKey)??background.toARGB32());
+      foreground=Color(p.getInt(_fgKey)??foreground.toARGB32()); size=(p.getDouble(_sizeKey)??p.getInt(_sizeKey)?.toDouble()??16).clamp(12,28).toDouble();
       style=p.getString(_styleKey)??'normal'; loading=false;});
   }
   Future<void> _save() async {
