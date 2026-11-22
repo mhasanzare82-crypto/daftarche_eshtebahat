@@ -12,7 +12,6 @@ class NotebookRepository {
   static const _fontsKey = 'notebook_custom_fonts';
   static const _randomThemesKey = 'notebook_random_theme_names';
   static const _pinnedNotesKey = 'notebook_pinned_note_ids';
-  static const _widgetNoteIdsKey = 'notebook_widget_note_ids';
   static const _pinnedFoldersKey = 'notebook_pinned_folder_ids';
   static const _textColorPaletteKey = 'notebook_text_color_palette';
   static const _appInterfaceFontKey = 'notebook_app_interface_font_family';
@@ -40,22 +39,6 @@ class NotebookRepository {
   Future<List<String>> loadPinnedNoteIds() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getStringList(_pinnedNotesKey) ?? <String>[];
-  }
-
-  Future<List<String>> loadWidgetNoteIds() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_widgetNoteIdsKey);
-    if (raw == null || raw.isEmpty) return <String>[];
-    try { return List<String>.from(jsonDecode(raw) as List); }
-    catch (_) { return <String>[]; }
-  }
-
-  Future<void> saveWidgetNoteIds(List<String> values) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!await prefs.setString(_widgetNoteIdsKey, jsonEncode(values))) {
-      throw StateError('Unable to persist widget note selection');
-    }
-    await HomeWidgetSync.saveWidgetSelection(values);
   }
 
   Future<List<String>> loadPinnedFolderIds() async {
