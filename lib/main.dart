@@ -179,11 +179,8 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
   final customFonts=<String, String>{};
   final randomThemeNames=<String>{};
   final pinnedNoteIds=<String>{};
-  final widgetNoteIds=<String>{};
   final pinnedFolderIds=<String>{};
   final textColorPalette=<int>[];
-  int featuredWidgetTextColor = 0xFFC4CCD6;
-  int featuredWidgetBackgroundColor = 0xFF242A32;
   bool showPinnedOnly=false;
   final noteBackgroundColors=<String, int>{};
   static const defaultThemes=[NoteTheme('یاسی',0xFFEDE7F6),NoteTheme('آبی',0xFFE3F2FD),NoteTheme('سبز',0xFFE8F5E9),NoteTheme('صورتی',0xFFFCE4EC),NoteTheme('هلویی',0xFFFFEAD5)];
@@ -256,14 +253,10 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       final loadedFonts = await repository.loadCustomFonts();
       final loadedRandomThemeNames = await repository.loadRandomThemeNames();
       final loadedPinnedNoteIds = await repository.loadPinnedNoteIds();
-      final loadedWidgetNoteIds = await repository.loadWidgetNoteIds();
       final loadedPinnedFolderIds = await repository.loadPinnedFolderIds();
       final loadedTextColorPalette = await repository.loadTextColorPalette();
       final loadedAppFontFamily = await repository.loadAppInterfaceFontFamily();
       final loadedAppTheme = await repository.loadAppTheme();
-      final widgetPrefs = await SharedPreferences.getInstance();
-      featuredWidgetTextColor = widgetPrefs.getInt('featured_note_widget_text_color') ?? 0xFFC4CCD6;
-      featuredWidgetBackgroundColor = widgetPrefs.getInt('featured_note_widget_background_color') ?? 0xFF242A32;
       notes.addAll(loadedNotes);
       featuredNote = _randomNote(loadedNotes);
       themes.addAll(loadedThemes);
@@ -271,7 +264,6 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       customFonts.addAll(loadedFonts);
       randomThemeNames.addAll(loadedRandomThemeNames);
       pinnedNoteIds.addAll(loadedPinnedNoteIds);
-      widgetNoteIds.addAll(loadedWidgetNoteIds.where((id) => loadedNotes.any((note) => note.id == id)));
       pinnedFolderIds.addAll(loadedPinnedFolderIds);
       textColorPalette.addAll(loadedTextColorPalette);
       for (final entry in customFonts.entries) {
@@ -303,19 +295,6 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
   Future<void> persistFolders() => repository.saveFolders(folders);
   Future<void> persistThemes() => repository.saveThemes(themes);
   Future<void> persistPinnedNotes() => repository.savePinnedNoteIds(pinnedNoteIds.toList());
-  Future<void> persistWidgetNotes() => repository.saveWidgetNoteIds(widgetNoteIds.toList());
-
-  Future<void> toggleWidgetNote(Note note) async {
-    setState(() {
-      if (!widgetNoteIds.add(note.id)) widgetNoteIds.remove(note.id);
-    });
-    await persistWidgetNotes();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(widgetNoteIds.contains(note.id) ? 'یادداشت به ویجت اضافه شد' : 'یادداشت از ویجت برداشته شد'),
-      ));
-    }
-  }
   Future<void> persistPinnedFolders() => repository.savePinnedFolderIds(pinnedFolderIds.toList());
 
   Future<void> togglePinnedNote(Note note) async {
@@ -375,8 +354,6 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       initialTextColorPalette:List<int>.of(textColorPalette),
       initialAppFontFamily:appInterfaceFontFamily.value,
       initialAppThemeName:appThemeName.value,
-      initialWidgetTextColor:featuredWidgetTextColor,
-      initialWidgetBackgroundColor:featuredWidgetBackgroundColor,
       onAddCustomFont:() async {
         await addCustomFont();
         return customFonts.keys.toList();
@@ -389,18 +366,13 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
         textColorPalette..clear()..addAll(result.textColorPalette);
         appInterfaceFontFamily.value = result.appFontFamily;
         appThemeName.value = result.appThemeName;
-        featuredWidgetTextColor = result.widgetTextColor;
-        featuredWidgetBackgroundColor = result.widgetBackgroundColor;
       });
       await persistThemes();
       await repository.saveRandomThemeNames(randomThemeNames.toList());
       await repository.saveTextColorPalette(textColorPalette);
       await repository.saveAppInterfaceFontFamily(result.appFontFamily);
       await repository.saveAppTheme(result.appThemeName);
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('featured_note_widget_text_color', featuredWidgetTextColor);
-      await prefs.setInt('featured_note_widget_background_color', featuredWidgetBackgroundColor);
-      await const MethodChannel('com.mhasanzare82.daftarcheeshtebahat/widget').invokeMethod('refreshWidget');
+      await HomeWidgetSync.refresh();
     }
   }
   Future<void> addCustomFont() async {
@@ -547,7 +519,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
     final yes=await showDialog<bool>(context:context,builder:(c)=>AlertDialog(
       title:const Text('حذف یادداشت؟'),content:const Text('این یادداشت حذف خواهد شد.'),
       actions:[TextButton(onPressed:()=>Navigator.pop(c,false),child:const Text('انصراف')),FilledButton(onPressed:()=>Navigator.pop(c,true),child:const Text('حذف'))]));
-    if(yes==true){setState((){notes.removeWhere((x)=>x.id==n.id);widgetNoteIds.remove(n.id);if(featuredNote?.id==n.id)featuredNote=_randomNote(notes);});await persist();await persistWidgetNotes();}
+    if(yes==true){setState((){notes.removeWhere((x)=>x.id==n.id);if(featuredNote?.id==n.id)featuredNote=_randomNote(notes);});await persist();}
   }
 
   String _xmlEscape(String value) => value.replaceAll('&', '&amp;')
@@ -971,9 +943,6 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
   void showNoteMenu(Note note) {
     showModalBottomSheet<void>(context: context, builder: (sheetContext) =>
       Directionality(textDirection: TextDirection.rtl, child: SafeArea(child: Wrap(children: [
-        ListTile(leading: Icon(widgetNoteIds.contains(note.id) ? Icons.widgets : Icons.widgets_outlined),
-          title: Text(widgetNoteIds.contains(note.id) ? 'برداشتن از ویجت' : 'افزودن به ویجت'),
-          onTap: () { Navigator.pop(sheetContext); toggleWidgetNote(note); }),
         ListTile(leading: Icon(pinnedNoteIds.contains(note.id) ? Icons.push_pin : Icons.push_pin_outlined),
           title: Text(pinnedNoteIds.contains(note.id) ? 'برداشتن سنجاق یادداشت' : 'سنجاق کردن یادداشت'),
           onTap: () { Navigator.pop(sheetContext); togglePinnedNote(note); }),
