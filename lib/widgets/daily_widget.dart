@@ -109,27 +109,33 @@ class _DailyWidgetSettingsScreenState extends State<DailyWidgetSettingsScreen> {
 
   List<String> _boundedSections(Note note) {
     final body = _plainText(note.body);
-    final separator = RegExp(r'^[ \t]*-{20,}[ \t]*;
+    final separator = RegExp(r'^[ \t]*-{20,}[ \t]*$', multiLine: true);
     final chunks = body.split(separator);
     final lines = body.trimRight().split('\n');
     final beginsWithSeparator = lines.isNotEmpty &&
-        RegExp(r'^[ \t]*-{20,}[ \t]*.hasMatch(lines.first);
+        RegExp(r'^[ \t]*-{20,}[ \t]*$', multiLine: true).hasMatch(lines.first);
     final endsWithSeparator = lines.isNotEmpty &&
-        RegExp(r'^[ \t]*-{20,}[ \t]*$').hasMatch(lines.last);
+        RegExp(r'^[ \t]*-{20,}[ \t]*$', multiLine: true).hasMatch(lines.last);
 
     // Do not show text outside a pair of separator lines, or notes with no separators.
     if (!beginsWithSeparator && chunks.isNotEmpty) chunks.removeAt(0);
     if (!endsWithSeparator && chunks.isNotEmpty) chunks.removeLast();
 
-    return chunks.map((section) => section.trim()).where((section) => section.isNotEmpty).toList();
+    return chunks
+        .map((section) => section.trim())
+        .where((section) => section.isNotEmpty)
+        .toList();
   }
 
   Widget _channelSlider(String label, Color color, bool isBackground, int channel) {
+    final redValue = (color.r * 255.0).round().clamp(0, 255);
+    final greenValue = (color.g * 255.0).round().clamp(0, 255);
+    final blueValue = (color.b * 255.0).round().clamp(0, 255);
     final value = channel == 0
-        ? (color.r * 255.0).round().clamp(0, 255)
+        ? redValue
         : channel == 1
-            ? (color.g * 255.0).round().clamp(0, 255)
-            : (color.b * 255.0).round().clamp(0, 255);
+            ? greenValue
+            : blueValue;
 
     return ListTile(
       dense: true,
@@ -140,9 +146,9 @@ class _DailyWidgetSettingsScreenState extends State<DailyWidgetSettingsScreen> {
         divisions: 255,
         value: value.toDouble(),
         onChanged: (newValue) {
-          final red = channel == 0 ? newValue.round() : color.red;
-          final green = channel == 1 ? newValue.round() : color.green;
-          final blue = channel == 2 ? newValue.round() : color.blue;
+          final red = channel == 0 ? newValue.round() : redValue;
+          final green = channel == 1 ? newValue.round() : greenValue;
+          final blue = channel == 2 ? newValue.round() : blueValue;
           final changed = Color.fromARGB(255, red, green, blue);
           setState(() {
             if (isBackground) {
