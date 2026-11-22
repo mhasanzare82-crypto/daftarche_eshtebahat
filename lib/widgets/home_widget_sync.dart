@@ -1,41 +1,50 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-/// Requests a native Android home-screen widget refresh after notebook data changes.
+/// The single Flutter-to-Android boundary for all home-screen widgets.
 class HomeWidgetSync {
-  static const MethodChannel _channel = MethodChannel('com.mhasanzare82.daftarcheeshtebahat/widget');
+  static const MethodChannel _channel = MethodChannel(
+    'com.mhasanzare82.daftarcheeshtebahat/daily_reminder_widget',
+  );
 
-  /// Persists the exact selected IDs natively before refreshing the daily widget.
-  /// This avoids relying on two independent preference writers observing the
-  /// same selection at precisely the same time.
-  static Future<void> saveWidgetSelection(List<String> ids) async {
+  /// Sends complete selected-note snapshots. Android never has to decode
+  /// Flutter's private SharedPreferences representation or guess its keys.
+  static Future<void> syncDailyReminder(
+    List<Map<String, dynamic>> selectedNotes,
+  ) async {
     try {
       final result = await _channel.invokeMapMethod<String, dynamic>(
-        'setWidgetNoteSelection',
-        <String, Object>{'ids': ids},
+        'syncDailyReminder',
+        <String, Object>{
+          'payload': jsonEncode(selectedNotes),
+        },
       );
-      debugPrint('Daily widget selection sync: $result');
+      debugPrint('Daily reminder widget synchronized: $result');
     } on MissingPluginException catch (error) {
-      debugPrint('Daily widget selection bridge is unavailable: $error');
+      debugPrint('Daily reminder widget bridge is unavailable: $error');
       rethrow;
     } on PlatformException catch (error, stackTrace) {
-      debugPrint('Daily widget selection sync failed: ${error.code}: ${error.message}');
+      debugPrint(
+        'Daily reminder widget synchronization failed: '
+        '${error.code}: ${error.message}',
+      );
       debugPrintStack(stackTrace: stackTrace);
       rethrow;
     }
   }
 
-  static Future<void> refresh({bool selectionChanged = false}) async {
+  /// Refreshes widgets after visual settings or other shared data changes.
+  static Future<void> refresh() async {
     try {
-      await _channel.invokeMethod<void>(
-        selectionChanged ? 'refreshWidgetSelection' : 'refreshWidget',
-      );
+      await _channel.invokeMethod<void>('refreshWidgets');
     } on MissingPluginException catch (error) {
-      // The widget bridge is Android-specific; other platforms safely ignore it.
       debugPrint('Home widget bridge is unavailable: $error');
     } on PlatformException catch (error, stackTrace) {
-      // Keep notebook persistence successful, but make refresh failures diagnosable.
-      debugPrint('Home widget refresh failed (selectionChanged=$selectionChanged): ${error.code}: ${error.message}');
+      debugPrint(
+        'Home widget refresh failed: ${error.code}: ${error.message}',
+      );
       debugPrintStack(stackTrace: stackTrace);
     }
   }
