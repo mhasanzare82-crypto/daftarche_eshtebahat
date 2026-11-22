@@ -509,6 +509,23 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
         .where((line) => line.toLowerCase().contains(normalized))
         .map((line) => line.trim()).where((line) => line.isNotEmpty).toList();
   }
+  Widget _searchHighlightedText(String text, String query, {required Color textColor, required String? fontFamily}) {
+    final needle = query.trim();
+    if (needle.isEmpty) return Text(text, style: TextStyle(color: textColor, fontFamily: fontFamily));
+    final lowerText = text.toLowerCase();
+    final lowerNeedle = needle.toLowerCase();
+    final spans = <TextSpan>[];
+    var cursor = 0;
+    while (cursor < text.length) {
+      final found = lowerText.indexOf(lowerNeedle, cursor);
+      if (found < 0) { spans.add(TextSpan(text: text.substring(cursor))); break; }
+      if (found > cursor) spans.add(TextSpan(text: text.substring(cursor, found)));
+      final end = found + needle.length;
+      spans.add(TextSpan(text: text.substring(found, end), style: const TextStyle(color: Color(0xFF7A3E00), backgroundColor: Color(0xFFFFD54F), fontWeight: FontWeight.w900)));
+      cursor = end;
+    }
+    return RichText(text: TextSpan(style: TextStyle(color: textColor, fontFamily: fontFamily, fontWeight: FontWeight.w600), children: spans));
+  }
 
   Future<void> edit({Note? note, String? searchQuery}) async {
     final availableThemes = themes.where((theme) => randomThemeNames.contains(theme.name)).toList();
@@ -1131,8 +1148,8 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
             final matchingLines = query.isEmpty ? <String>[] : _matchingLines(n, query);
             return Card(elevation:0,color:Color(backgroundColor),child:InkWell(onTap:()=>edit(note: n, searchQuery: query.isEmpty ? null : query),child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
               Row(children:[if(pinnedNoteIds.contains(n.id))const Padding(padding:EdgeInsets.only(left:6),child:Icon(Icons.push_pin_rounded,size:17)),Expanded(child:Text(n.title.isEmpty?'بدون عنوان':n.title,style:TextStyle(fontWeight:FontWeight.bold,fontSize:16,color:Color(n.themeTextColor),fontFamily:n.themeFontFamily))),IconButton(tooltip:'گزینه‌های یادداشت',onPressed:()=>showNoteMenu(n),icon:const Icon(Icons.more_vert))]),
-              if(query.isNotEmpty && matchingLines.isNotEmpty) ...matchingLines.take(6).map((line)=>Padding(padding:const EdgeInsets.only(top:6),child:Text(line,style:TextStyle(color:Color(n.themeTextColor),fontFamily:n.themeFontFamily,fontWeight:FontWeight.w600)))),
-              if(query.isNotEmpty && matchingLines.isEmpty && n.title.toLowerCase().contains(query.toLowerCase()))Text('عنوان: ${n.title}',style:TextStyle(color:Color(n.themeTextColor),fontFamily:n.themeFontFamily,fontWeight:FontWeight.w600)),
+              if(query.isNotEmpty && matchingLines.isNotEmpty) ...matchingLines.take(6).map((line)=>Padding(padding:const EdgeInsets.only(top:6),child:_searchHighlightedText(line,query,textColor:Color(n.themeTextColor),fontFamily:n.themeFontFamily))),
+              if(query.isNotEmpty && matchingLines.isEmpty && n.title.toLowerCase().contains(query.toLowerCase()))_searchHighlightedText('عنوان: ${n.title}',query,textColor:Color(n.themeTextColor),fontFamily:n.themeFontFamily),
               if(query.isEmpty && _notePlainText(n.body).isNotEmpty)Text(_notePlainText(n.body),maxLines:3,overflow:TextOverflow.ellipsis,style:TextStyle(color:Color(n.themeTextColor),fontFamily:n.themeFontFamily)),
               if(n.images.isNotEmpty)Padding(padding:const EdgeInsets.only(top:8),child:Text('${n.images.length} تصویر پیوست شده',style:TextStyle(color:Color(n.themeTextColor).withValues(alpha: .7),fontSize:12,fontFamily:n.themeFontFamily))),
               if(n.audios.isNotEmpty)Padding(
