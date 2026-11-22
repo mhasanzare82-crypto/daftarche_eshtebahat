@@ -502,7 +502,15 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
     });
     return list;
   }
-  Future<void> edit([Note? note]) async {
+  List<String> _matchingLines(Note note, String query) {
+    final normalized = query.trim().toLowerCase();
+    if (normalized.isEmpty) return const [];
+    return _notePlainText(note.body).split(RegExp(r'\\r?\\n'))
+        .where((line) => line.toLowerCase().contains(normalized))
+        .map((line) => line.trim()).where((line) => line.isNotEmpty).toList();
+  }
+
+  Future<void> edit([Note? note], {String? searchQuery}) async {
     final availableThemes = themes.where((theme) => randomThemeNames.contains(theme.name)).toList();
     final themePool = availableThemes.isEmpty ? (themes.isEmpty ? defaultThemes : themes) : availableThemes;
     final selected=note==null?themePool[Random().nextInt(themePool.length)]:NoteTheme('فعلی',note.themeColor,note.themeTextColor,note.themeFontFamily);
@@ -512,7 +520,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
         ? availableFonts[Random().nextInt(availableFonts.length)]
         : selected.fontFamily;
     final initialTheme = NoteTheme(selected.name, selected.backgroundColor, selected.textColor, selectedFont);
-    final result=await Navigator.push<Note>(context,MaterialPageRoute(builder:(_)=>EditorPage(note:note,themes:themes,customFonts:customFonts.keys.toList(),initialTheme:initialTheme,initialFolderId:note?.folderId??selectedFolderId,backgroundColorOverride:note == null ? null : _backgroundColorFor(note),onAutoSave:(draft) async { if(!mounted)return; setState(() { final i=notes.indexWhere((n)=>n.id==draft.id); if(i<0){notes.add(draft);}else{notes[i]=draft;} }); await persist(); })));
+    final result=await Navigator.push<Note>(context,MaterialPageRoute(builder:(_)=>EditorPage(note:note,searchQuery:searchQuery,themes:themes,customFonts:customFonts.keys.toList(),initialTheme:initialTheme,initialFolderId:note?.folderId??selectedFolderId,backgroundColorOverride:note == null ? null : _backgroundColorFor(note),onAutoSave:(draft) async { if(!mounted)return; setState(() { final i=notes.indexWhere((n)=>n.id==draft.id); if(i<0){notes.add(draft);}else{notes[i]=draft;} }); await persist(); })));
     if(result==null){_refreshFeaturedNote();return;}
     setState(() { final i=notes.indexWhere((n)=>n.id==result.id); if(i<0){notes.add(result);}else{notes[i]=result;} if(featuredNote?.id==result.id)featuredNote=result; });
     await persist();
@@ -1119,9 +1127,12 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
           :ListView.separated(padding:const EdgeInsets.fromLTRB(20,0,20,100),itemCount:items.length,separatorBuilder: (_, _) => const SizedBox(height: 10),itemBuilder:(_,i){
             final n=items[i];
             final backgroundColor = _backgroundColorFor(n);
-            return Card(elevation:0,color:Color(backgroundColor),child:InkWell(onTap:()=>edit(n),child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            final query = search.text.trim();
+            final matchingLines = query.isEmpty ? <String>[] : _matchingLines(n, query);
+            return Card(elevation:0,color:Color(backgroundColor),child:InkWell(onTap:()=>edit(n,searchQuery:query.isEmpty?null:query),child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
               Row(children:[if(pinnedNoteIds.contains(n.id))const Padding(padding:EdgeInsets.only(left:6),child:Icon(Icons.push_pin_rounded,size:17)),Expanded(child:Text(n.title.isEmpty?'بدون عنوان':n.title,style:TextStyle(fontWeight:FontWeight.bold,fontSize:16,color:Color(n.themeTextColor),fontFamily:n.themeFontFamily))),IconButton(tooltip:'گزینه‌های یادداشت',onPressed:()=>showNoteMenu(n),icon:const Icon(Icons.more_vert))]),
-              if(_notePlainText(n.body).isNotEmpty)Text(_notePlainText(n.body),maxLines:3,overflow:TextOverflow.ellipsis,style:TextStyle(color:Color(n.themeTextColor),fontFamily:n.themeFontFamily)),
+              if(query.isNotEmpty && matchingLines.isNotEmpty) ...matchingLines.take(6).map((line)=>Padding(padding:const EdgeInsets.only(top:6),child:Text(line,style:TextStyle(color:Color(n.themeTextColor),fontFamily:n.themeFontFamily,fontWeight:FontWeight.w600)))),
+              if(query.isEmpty && _notePlainText(n.body).isNotEmpty)Text(_notePlainText(n.body),maxLines:3,overflow:TextOverflow.ellipsis,style:TextStyle(color:Color(n.themeTextColor),fontFamily:n.themeFontFamily)),
               if(n.images.isNotEmpty)Padding(padding:const EdgeInsets.only(top:8),child:Text('${n.images.length} تصویر پیوست شده',style:TextStyle(color:Color(n.themeTextColor).withValues(alpha: .7),fontSize:12,fontFamily:n.themeFontFamily))),
               if(n.audios.isNotEmpty)Padding(
                 padding:const EdgeInsets.only(top:8),
@@ -1155,13 +1166,14 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
 
 class EditorPage extends StatefulWidget {
   final Note? note;
+  final String? searchQuery;
   final Future<void> Function(Note note) onAutoSave;
   final List<NoteTheme> themes;
   final List<String> customFonts;
   final NoteTheme initialTheme;
   final String? initialFolderId;
   final int? backgroundColorOverride;
-  const EditorPage({super.key,this.note,required this.themes,required this.customFonts,required this.initialTheme,required this.onAutoSave, this.initialFolderId, this.backgroundColorOverride});
+  const EditorPage({super.key,this.note,this.searchQuery,required this.themes,required this.customFonts,required this.initialTheme,required this.onAutoSave, this.initialFolderId, this.backgroundColorOverride});
   @override
   State<EditorPage> createState()=>_EditorPageState();
 }
@@ -1176,6 +1188,8 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
   final List<String> audioPaths = [];
   bool isRecording = false;
   String? currentlyPlayingEditorAudio;
+  List<int> _searchPositions = [];
+  int _searchPositionIndex = 0;
   late int themeColor, themeTextColor;
   late String themeFontFamily;
   String? folderId;
@@ -1227,6 +1241,12 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     if (widget.note == null) {
       controller.formatSelection(quill.Attribute.fromKeyValue('size', '20'));
     }
+    _rebuildSearchPositions();
+    if (widget.searchQuery != null && widget.searchQuery!.trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _searchPositions.isNotEmpty) _jumpToSearchPosition(0);
+      });
+    }
     title.addListener(_scheduleAutoSave);
     controller.addListener(_scheduleAutoSave);
     themeColor = widget.backgroundColorOverride ?? widget.note?.themeColor ?? widget.initialTheme.backgroundColor;
@@ -1235,6 +1255,42 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     folderId = widget.note?.folderId ?? widget.initialFolderId;
     audioPaths.addAll(widget.note?.audios ?? const []);
   }
+
+  void _rebuildSearchPositions() {
+    final query = widget.searchQuery?.trim() ?? '';
+    _searchPositions = [];
+    _searchPositionIndex = 0;
+    if (query.isEmpty) return;
+    final plain = controller.document.toPlainText();
+    final lower = plain.toLowerCase();
+    final target = query.toLowerCase();
+    var offset = 0;
+    while (offset <= lower.length - target.length) {
+      final found = lower.indexOf(target, offset);
+      if (found < 0) break;
+      _searchPositions.add(found);
+      offset = found + target.length;
+    }
+  }
+
+
+  void _jumpToSearchPosition(int index) {
+    if (_searchPositions.isEmpty || widget.searchQuery == null) return;
+    final bounded = index.clamp(0, _searchPositions.length - 1);
+    _searchPositionIndex = bounded;
+    final start = _searchPositions[bounded];
+    final end = (start + widget.searchQuery!.trim().length).clamp(start, controller.document.length - 1);
+    controller.updateSelection(TextSelection(baseOffset: start, extentOffset: end), quill.ChangeSource.local);
+    if (mounted) setState(() {});
+  }
+
+
+  void _moveSearchOccurrence(int delta) {
+    if (_searchPositions.isEmpty) return;
+    final next = (_searchPositionIndex + delta).clamp(0, _searchPositions.length - 1);
+    _jumpToSearchPosition(next);
+  }
+
 
   Future<void> addImage() async {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
@@ -1395,6 +1451,11 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     textDirection: TextDirection.rtl,
     child: Scaffold(
       appBar: AppBar(title: const Text('یادداشت'), actions: [
+        if (widget.searchQuery != null && _searchPositions.isNotEmpty) ...[
+          IconButton(tooltip: 'نتیجه قبلی', onPressed: _searchPositionIndex > 0 ? () => _moveSearchOccurrence(-1) : null, icon: const Icon(Icons.keyboard_arrow_up)),
+          Center(child: Text('${_searchPositionIndex + 1} / ${_searchPositions.length}')),
+          IconButton(tooltip: 'نتیجه بعدی', onPressed: _searchPositionIndex < _searchPositions.length - 1 ? () => _moveSearchOccurrence(1) : null, icon: const Icon(Icons.keyboard_arrow_down)),
+        ],
         TextButton.icon(onPressed: save, icon: const Icon(Icons.check), label: const Text('ذخیره')),
       ]),
       backgroundColor: Color(themeColor),
