@@ -20,6 +20,7 @@ import 'package:path_provider/path_provider.dart';
 import 'models/note.dart';
 import 'data/notebook_repository.dart';
 import 'widgets/home_widget_sync.dart';
+import 'widgets/daily_widget.dart';
 import 'screens/theme_dialogs.dart';
 
 const String _quillNoteMarker = '__quill_note_v1__';
@@ -955,6 +956,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
         ListTile(leading: const Icon(Icons.drive_file_move_outline),
           title: const Text('انتقال به پوشه'),
           onTap: () { Navigator.pop(sheetContext); moveNote(note); }),
+        ListTile(leading:const Icon(Icons.auto_awesome_outlined),title:const Text('افزودن / برداشتن از ویجت یادآوری'),onTap:(){Navigator.pop(sheetContext);DailyWidgetSettingsScreen.toggleNote(note).then((added){if(mounted)ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text(added?'یادداشت به ویجت اضافه شد':'یادداشت از ویجت برداشته شد')));}),),
         ListTile(leading: const Icon(Icons.delete_outline, color: Colors.red),
           title: const Text('حذف یادداشت'),
           onTap: () { Navigator.pop(sheetContext); remove(note); }),
@@ -972,7 +974,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       return pinOrder!=0?pinOrder:a.name.compareTo(b.name);
     });
     return Directionality(textDirection:TextDirection.rtl,child:Scaffold(
-      appBar:AppBar(title:const Text('دفترچه اشتباهات',style:TextStyle(fontWeight:FontWeight.bold)),actions:[PopupMenuButton<String>(tooltip:'ورود و خروجی فایل‌ها',onSelected:(value){if(value=='import')importDocx();if(value=='export')exportDocx(notes);if(value=='backup')createBackup();if(value=='restore')restoreBackup();},itemBuilder:(context)=>const [PopupMenuItem(value:'import',child:ListTile(leading:Icon(Icons.file_open),title:Text('ورود گروهی DOCX'))),PopupMenuItem(value:'export',child:ListTile(leading:Icon(Icons.file_download),title:Text('خروجی گروهی DOCX'))),PopupMenuDivider(),PopupMenuItem(value:'backup',child:ListTile(leading:Icon(Icons.backup_outlined),title:Text('ساخت فایل پشتیبان'))),PopupMenuItem(value:'restore',child:ListTile(leading:Icon(Icons.settings_backup_restore),title:Text('بازیابی فایل پشتیبان')))]),IconButton(tooltip:'ایجاد پوشه',onPressed:createFolder,icon:const Icon(Icons.create_new_folder_outlined)),IconButton(tooltip:'مدیریت تم‌ها',onPressed:manageThemes,icon:const Icon(Icons.palette_outlined)),IconButton(onPressed:()=>edit(),icon:const Icon(Icons.add_rounded))]),
+      appBar:AppBar(title:const Text('دفترچه اشتباهات',style:TextStyle(fontWeight:FontWeight.bold)),actions:[PopupMenuButton<String>(tooltip:'ورود و خروجی فایل‌ها',onSelected:(value){if(value=='import')importDocx();if(value=='export')exportDocx(notes);if(value=='backup')createBackup();if(value=='restore')restoreBackup();},itemBuilder:(context)=>const [PopupMenuItem(value:'import',child:ListTile(leading:Icon(Icons.file_open),title:Text('ورود گروهی DOCX'))),PopupMenuItem(value:'export',child:ListTile(leading:Icon(Icons.file_download),title:Text('خروجی گروهی DOCX'))),PopupMenuDivider(),PopupMenuItem(value:'backup',child:ListTile(leading:Icon(Icons.backup_outlined),title:Text('ساخت فایل پشتیبان'))),PopupMenuItem(value:'restore',child:ListTile(leading:Icon(Icons.settings_backup_restore),title:Text('بازیابی فایل پشتیبان')))]),IconButton(tooltip:'تنظیم ویجت یادآوری',onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>DailyWidgetSettingsScreen(notes:notes))),icon:const Icon(Icons.auto_awesome_outlined)),IconButton(tooltip:'ایجاد پوشه',onPressed:createFolder,icon:const Icon(Icons.create_new_folder_outlined)),IconButton(tooltip:'مدیریت تم‌ها',onPressed:manageThemes,icon:const Icon(Icons.palette_outlined)),IconButton(onPressed:()=>edit(),icon:const Icon(Icons.add_rounded))]),
       floatingActionButton:FloatingActionButton.extended(onPressed:()=>edit(),icon:const Icon(Icons.edit_note_rounded),label:const Text('یادداشت جدید')),
       body:SafeArea(child:Column(children:[
         if(!loading && featuredNote != null)

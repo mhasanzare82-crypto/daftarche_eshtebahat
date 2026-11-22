@@ -16,6 +16,7 @@ class MainActivity : FlutterActivity() {
                 "refreshWidget" -> {
                     NotebookWidgetProvider.refreshAll(applicationContext)
                     QuickNoteWidgetProvider.refreshAll(applicationContext)
+                    DailyWidgetProvider.refreshAll(applicationContext)
                     result.success(null)
                 }
                 else -> result.notImplemented()

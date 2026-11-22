@@ -45,6 +45,16 @@
         </receiver>
 
         <receiver
+            android:name=".DailyWidgetProvider"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.mhasanzare82.daftarcheeshtebahat.DAILY_WIDGET_NEXT" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/daily_widget_info" />
+        </receiver>
+
+        <receiver
             android:name=".NotebookWidgetProvider"
             android:exported="true">
             <intent-filter>
