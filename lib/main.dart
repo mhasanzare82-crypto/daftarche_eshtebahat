@@ -505,7 +505,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
   List<String> _matchingLines(Note note, String query) {
     final normalized = query.trim().toLowerCase();
     if (normalized.isEmpty) return const [];
-    return _notePlainText(note.body).split(RegExp(r'\\r?\\n'))
+    return _notePlainText(note.body).split(RegExp(r'\r?\n'))
         .where((line) => line.toLowerCase().contains(normalized))
         .map((line) => line.trim()).where((line) => line.isNotEmpty).toList();
   }
@@ -1276,10 +1276,10 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
 
   void _jumpToSearchPosition(int index) {
     if (_searchPositions.isEmpty || widget.searchQuery == null) return;
-    final bounded = index.clamp(0, _searchPositions.length - 1);
+    final bounded = index.clamp(0, _searchPositions.length - 1).toInt();
     _searchPositionIndex = bounded;
     final start = _searchPositions[bounded];
-    final end = (start + widget.searchQuery!.trim().length).clamp(start, controller.document.length - 1);
+    final end = (start + widget.searchQuery!.trim().length).clamp(start, controller.document.length - 1).toInt();
     controller.updateSelection(TextSelection(baseOffset: start, extentOffset: end), quill.ChangeSource.local);
     if (mounted) setState(() {});
   }
@@ -1287,7 +1287,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
 
   void _moveSearchOccurrence(int delta) {
     if (_searchPositions.isEmpty) return;
-    final next = (_searchPositionIndex + delta).clamp(0, _searchPositions.length - 1);
+    final next = (_searchPositionIndex + delta).clamp(0, _searchPositions.length - 1).toInt();
     _jumpToSearchPosition(next);
   }
 
