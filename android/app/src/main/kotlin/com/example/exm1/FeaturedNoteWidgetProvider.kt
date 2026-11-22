@@ -60,9 +60,7 @@ class FeaturedNoteWidgetProvider : AppWidgetProvider() {
                 val ids = JSONArray(raw)
                 (0 until ids.length()).map { ids.optString(it) }
             } catch (_: Exception) { emptyList() }
-            // Keep the widget useful if the saved selection is empty or stale.
-            // Prefer explicitly selected notes, but fall back to the notebook notes
-            // instead of leaving the daily reminder widget blank.
+            // Only explicitly selected notes are eligible for this widget.
             val selectedNotes = selectedIds.distinct().mapNotNull { id ->
                 allNotes.firstOrNull { it.optString("id") == id }
             }
