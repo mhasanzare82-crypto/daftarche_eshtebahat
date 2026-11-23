@@ -1618,13 +1618,14 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
         TextButton.icon(onPressed: save, icon: const Icon(Icons.check), label: const Text('ذخیره')),
       ]),
       backgroundColor: Color(themeColor),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(children: [
-          TextField(
+      body: Column(children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
             controller: title, autofocus: false,
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(themeTextColor), fontFamily: themeFontFamily),
             decoration: const InputDecoration(hintText: 'عنوان یادداشت', border: InputBorder.none),
+            ),
           ),
           const SizedBox(height: 8),
           Expanded(
