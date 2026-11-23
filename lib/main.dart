@@ -1057,9 +1057,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
           ),
         Padding(padding:const EdgeInsets.fromLTRB(20,8,20,18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
           TextField(controller:search,decoration:InputDecoration(hintText:'جستجو در یادداشت‌ها...',prefixIcon:const Icon(Icons.search),suffixIcon:search.text.isEmpty?null:IconButton(onPressed:search.clear,icon:const Icon(Icons.close)),filled:true,fillColor:Colors.white,border:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide.none))),
-          const SizedBox(height:16),
-          const Text('پوشه‌ها',style:TextStyle(fontWeight:FontWeight.bold)),
-          const SizedBox(height:10),
+          const SizedBox(height:8),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -1105,6 +1103,8 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
                   ]),                )),              ],
             ),
           ),
+          const Text('پوشه‌ها',style:TextStyle(fontWeight:FontWeight.bold)),
+          const SizedBox(height:10),
           const SizedBox(height:16),
 
         ])),
