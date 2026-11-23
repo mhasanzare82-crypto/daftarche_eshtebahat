@@ -346,6 +346,38 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
     setState((){final i=notes.indexWhere((n)=>n.id==note.id);if(i>=0){final n=notes[i];notes[i]=Note(n.id,n.title,n.body,n.updated,List.of(n.images),n.themeColor,n.themeTextColor,n.themeFontFamily,id,List.of(n.audios));}});
     await persist();
   }
+  Future<void> manageFolders() async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => FolderManagerDialog(
+        initialFolders: List<NoteFolder>.of(folders),
+        onSave: (updatedFolders, deletedIds) async {
+          setState(() {
+            folders..clear()..addAll(updatedFolders);
+            for (final folderId in deletedIds) {
+              pinnedFolderIds.remove(folderId);
+              if (selectedFolderId == folderId) selectedFolderId = null;
+              for (var i = 0; i < notes.length; i++) {
+                final note = notes[i];
+                if (note.folderId == folderId) {
+                  notes[i] = Note(note.id, note.title, note.body, note.updated,
+                    List.of(note.images), note.themeColor, note.themeTextColor,
+                    note.themeFontFamily, null, List.of(note.audios));
+                }
+              }
+            }
+          });
+          await persistFolders();
+          await persist();
+          await persistPinnedFolders();
+        },
+        onSelect: (folder) {
+          setState(() { selectedFolderId = folder.id; showPinnedOnly = false; });
+        },
+      ),
+    );
+  }
+
   Future<void> manageThemes() async {
     final result=await showDialog<ThemeManagerResult>(context:context,builder:(context)=>ThemeManagerDialog(
       initialThemes:List.of(themes),
@@ -1100,7 +1132,16 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
                         ),
                       )],
                     ),
-                  ]),                )),              ],
+                  ]),                )),
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: _folderFilterChip(
+                    label: 'مدیریت پوشه‌ها',
+                    selected: false,
+                    onTap: manageFolders,
+                    icon: Icons.folder_special_outlined,
+                  ),
+              ],
             ),
           ),
           const SizedBox(height:16),
@@ -1147,6 +1188,126 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       ])),
     ));
   }
+}
+
+class FolderManagerDialog extends StatefulWidget {
+  final List<NoteFolder> initialFolders;
+  final Future<void> Function(List<NoteFolder>, Set<String>) onSave;
+  final void Function(NoteFolder) onSelect;
+  const FolderManagerDialog({super.key, required this.initialFolders, required this.onSave, required this.onSelect});
+  @override
+  State<FolderManagerDialog> createState() => _FolderManagerDialogState();
+}
+
+class _FolderManagerDialogState extends State<FolderManagerDialog> {
+  late List<NoteFolder> folders;
+  final Set<String> deletedIds = {};
+
+  @override
+  void initState() {
+    super.initState();
+    folders = List.of(widget.initialFolders);
+  }
+
+  Future<String?> _askName({String title = 'نام پوشه', String initial = ''}) async {
+    final controller = TextEditingController(text: initial);
+    final value = await showDialog<String>(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: Text(title),
+          content: TextField(controller: controller, autofocus: true, maxLength: 30,
+            decoration: const InputDecoration(hintText: 'نام پوشه')),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('انصراف')),
+            FilledButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('ذخیره')),
+          ],
+        ),
+      ),
+    );
+    controller.dispose();
+    if (value == null || value.trim().isEmpty) return null;
+    return value.trim();
+  }
+
+  Future<void> _create() async {
+    final name = await _askName(title: 'ایجاد پوشه');
+    if (name == null) return;
+    setState(() => folders.add(NoteFolder(DateTime.now().microsecondsSinceEpoch.toString(), name)));
+    await widget.onSave(folders, deletedIds);
+  }
+
+  Future<void> _rename(NoteFolder folder) async {
+    final name = await _askName(title: 'تغییر نام پوشه', initial: folder.name);
+    if (name == null) return;
+    setState(() {
+      final index = folders.indexWhere((f) => f.id == folder.id);
+      if (index >= 0) folders[index] = NoteFolder(folder.id, name);
+    });
+    await widget.onSave(folders, deletedIds);
+  }
+
+  Future<void> _delete(NoteFolder folder) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => Directionality(textDirection: TextDirection.rtl, child: AlertDialog(
+        title: const Text('حذف پوشه'),
+        content: Text('پوشه «${folder.name}» حذف شود؟ یادداشت‌های آن به بخش بدون پوشه منتقل می‌شوند.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('انصراف')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('حذف')),
+        ],
+      )),
+    );
+    if (confirmed != true) return;
+    setState(() {
+      folders.removeWhere((f) => f.id == folder.id);
+      deletedIds.add(folder.id);
+    });
+    await widget.onSave(folders, deletedIds);
+  }
+
+  @override
+  Widget build(BuildContext context) => Directionality(
+    textDirection: TextDirection.rtl,
+    child: Dialog.fullscreen(
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('مدیریت پوشه‌ها'),
+          leading: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+          actions: [IconButton(tooltip: 'ایجاد پوشه', onPressed: _create, icon: const Icon(Icons.create_new_folder_outlined))],
+        ),
+        body: folders.isEmpty
+          ? const Center(child: Text('هنوز پوشه‌ای ایجاد نشده است.'))
+          : ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: folders.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final folder = folders[index];
+                return ListTile(
+                  leading: const Icon(Icons.folder_outlined),
+                  title: Text(folder.name),
+                  onTap: () { widget.onSelect(folder); Navigator.pop(context); },
+                  trailing: PopupMenuButton<String>(
+                    onSelected: (value) { if (value == 'rename') _rename(folder); if (value == 'delete') _delete(folder); },
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(value: 'rename', child: Text('تغییر نام')),
+                      PopupMenuItem(value: 'delete', child: Text('حذف پوشه')),
+                    ],
+                  ),
+                );
+              },
+            ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _create,
+          icon: const Icon(Icons.create_new_folder_outlined),
+          label: const Text('پوشه جدید'),
+        ),
+      ),
+    ),
+  );
 }
 
 class EditorPage extends StatefulWidget {
