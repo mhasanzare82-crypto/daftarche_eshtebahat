@@ -1103,8 +1103,6 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
                   ]),                )),              ],
             ),
           ),
-          const Text('پوشه‌ها',style:TextStyle(fontWeight:FontWeight.bold)),
-          const SizedBox(height:10),
           const SizedBox(height:16),
 
         ])),
