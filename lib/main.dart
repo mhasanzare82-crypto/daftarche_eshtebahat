@@ -1141,6 +1141,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
                     onTap: manageFolders,
                     icon: Icons.folder_special_outlined,
                   ),
+                ),
               ],
             ),
           ),
