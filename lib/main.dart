@@ -374,6 +374,8 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
         onSelect: (folder) {
           setState(() { selectedFolderId = folder.id; showPinnedOnly = false; });
         },
+        initialPinnedFolderIds: Set<String>.of(pinnedFolderIds),
+        onTogglePin: togglePinnedFolder,
       ),
     );
   }
@@ -1004,7 +1006,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       return pinOrder!=0?pinOrder:a.name.compareTo(b.name);
     });
     return Directionality(textDirection:TextDirection.rtl,child:Scaffold(
-      appBar:AppBar(title:const Text('دفترچه اشتباهات',style:TextStyle(fontWeight:FontWeight.bold)),actions:[PopupMenuButton<String>(tooltip:'ورود و خروجی فایل‌ها',onSelected:(value){if(value=='import')importDocx();if(value=='export')exportDocx(notes);if(value=='backup')createBackup();if(value=='restore')restoreBackup();},itemBuilder:(context)=>const [PopupMenuItem(value:'import',child:ListTile(leading:Icon(Icons.file_open),title:Text('ورود گروهی DOCX'))),PopupMenuItem(value:'export',child:ListTile(leading:Icon(Icons.file_download),title:Text('خروجی گروهی DOCX'))),PopupMenuDivider(),PopupMenuItem(value:'backup',child:ListTile(leading:Icon(Icons.backup_outlined),title:Text('ساخت فایل پشتیبان'))),PopupMenuItem(value:'restore',child:ListTile(leading:Icon(Icons.settings_backup_restore),title:Text('بازیابی فایل پشتیبان')))]),IconButton(tooltip:'ایجاد پوشه',onPressed:createFolder,icon:const Icon(Icons.create_new_folder_outlined)),IconButton(tooltip:'مدیریت تم‌ها',onPressed:manageThemes,icon:const Icon(Icons.palette_outlined)),IconButton(onPressed:()=>edit(),icon:const Icon(Icons.add_rounded))]),
+      appBar:AppBar(title:const Text('دفترچه اشتباهات',style:TextStyle(fontWeight:FontWeight.bold)),actions:[PopupMenuButton<String>(tooltip:'ورود و خروجی فایل‌ها',onSelected:(value){if(value=='import')importDocx();if(value=='export')exportDocx(notes);if(value=='backup')createBackup();if(value=='restore')restoreBackup();},itemBuilder:(context)=>const [PopupMenuItem(value:'import',child:ListTile(leading:Icon(Icons.file_open),title:Text('ورود گروهی DOCX'))),PopupMenuItem(value:'export',child:ListTile(leading:Icon(Icons.file_download),title:Text('خروجی گروهی DOCX'))),PopupMenuDivider(),PopupMenuItem(value:'backup',child:ListTile(leading:Icon(Icons.backup_outlined),title:Text('ساخت فایل پشتیبان'))),PopupMenuItem(value:'restore',child:ListTile(leading:Icon(Icons.settings_backup_restore),title:Text('بازیابی فایل پشتیبان')))]) ,IconButton(tooltip:'مدیریت تم‌ها',onPressed:manageThemes,icon:const Icon(Icons.palette_outlined))]),
       floatingActionButton:FloatingActionButton.extended(onPressed:()=>edit(),icon:const Icon(Icons.edit_note_rounded),label:const Text('یادداشت جدید')),
       body:SafeArea(child:Column(children:[
         if(!loading && featuredNote != null)
@@ -1120,18 +1122,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
                       onTap: () => setState(() { selectedFolderId = folder.id; showPinnedOnly = false; }),
                       icon: pinnedFolderIds.contains(folder.id) ? Icons.push_pin_rounded : Icons.folder_outlined,
                     ),
-                    PopupMenuButton<String>(
-                      tooltip: 'گزینه‌های پوشه ${folder.name}',
-                      onSelected: (value) { if (value == 'pin') togglePinnedFolder(folder); },
-                      itemBuilder: (_) => [PopupMenuItem(
-                        value: 'pin',
-                        child: ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: Icon(pinnedFolderIds.contains(folder.id) ? Icons.push_pin : Icons.push_pin_outlined),
-                          title: Text(pinnedFolderIds.contains(folder.id) ? 'برداشتن سنجاق پوشه' : 'سنجاق کردن پوشه'),
-                        ),
-                      )],
-                    ),
+
                   ]),                )),
                 Padding(
                   padding: const EdgeInsets.only(left: 8),
@@ -1149,7 +1140,9 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
 
         ])),
         Expanded(child:loading?const Center(child:CircularProgressIndicator()):items.isEmpty
-          ?Center(child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.menu_book_rounded,size:64,color:Color(0xFF9DA3AA)),const SizedBox(height:12),Text(search.text.isEmpty?(selectedFolderId==null?'دفترچه‌ات هنوز خالی است':'این پوشه هنوز خالی است'):'یادداشتی پیدا نشد',style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),const SizedBox(height:8),Text(search.text.isEmpty?'اولین یادداشتت را بنویس.':'عبارت دیگری را جستجو کن.'),if(search.text.isEmpty)...[const SizedBox(height:14),FilledButton(onPressed:()=>edit(),child:const Text('نوشتن اولین یادداشت'))]]))
+          ?(selectedFolderId != null && search.text.isEmpty
+              ? const SizedBox.shrink()
+              : Center(child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.menu_book_rounded,size:64,color:Color(0xFF9DA3AA)),const SizedBox(height:12),Text(search.text.isEmpty?'دفترچه‌ات هنوز خالی است':'یادداشتی پیدا نشد',style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),const SizedBox(height:8),Text(search.text.isEmpty?'اولین یادداشتت را بنویس.':'عبارت دیگری را جستجو کن.'),if(search.text.isEmpty)...[const SizedBox(height:14),FilledButton(onPressed:()=>edit(),child:const Text('نوشتن اولین یادداشت'))]])))
           :ListView.separated(padding:const EdgeInsets.fromLTRB(20,0,20,100),itemCount:items.length,separatorBuilder: (_, _) => const SizedBox(height: 10),itemBuilder:(_,i){
             final n=items[i];
             final backgroundColor = _backgroundColorFor(n);
@@ -1195,7 +1188,9 @@ class FolderManagerDialog extends StatefulWidget {
   final List<NoteFolder> initialFolders;
   final Future<void> Function(List<NoteFolder>, Set<String>) onSave;
   final void Function(NoteFolder) onSelect;
-  const FolderManagerDialog({super.key, required this.initialFolders, required this.onSave, required this.onSelect});
+  final Set<String> initialPinnedFolderIds;
+  final Future<void> Function(NoteFolder) onTogglePin;
+  const FolderManagerDialog({super.key, required this.initialFolders, required this.onSave, required this.onSelect, required this.initialPinnedFolderIds, required this.onTogglePin});
   @override
   State<FolderManagerDialog> createState() => _FolderManagerDialogState();
 }
@@ -1203,11 +1198,13 @@ class FolderManagerDialog extends StatefulWidget {
 class _FolderManagerDialogState extends State<FolderManagerDialog> {
   late List<NoteFolder> folders;
   final Set<String> deletedIds = {};
+  late final Set<String> pinnedFolderIds;
 
   @override
   void initState() {
     super.initState();
     folders = List.of(widget.initialFolders);
+    pinnedFolderIds = Set<String>.of(widget.initialPinnedFolderIds);
   }
 
   Future<String?> _askName({String title = 'نام پوشه', String initial = ''}) async {
@@ -1292,10 +1289,27 @@ class _FolderManagerDialogState extends State<FolderManagerDialog> {
                   title: Text(folder.name),
                   onTap: () { widget.onSelect(folder); Navigator.pop(context); },
                   trailing: PopupMenuButton<String>(
-                    onSelected: (value) { if (value == 'rename') _rename(folder); if (value == 'delete') _delete(folder); },
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(value: 'rename', child: Text('تغییر نام')),
-                      PopupMenuItem(value: 'delete', child: Text('حذف پوشه')),
+                    onSelected: (value) {
+                      if (value == 'pin') {
+                        setState(() {
+                          if (!pinnedFolderIds.add(folder.id)) pinnedFolderIds.remove(folder.id);
+                        });
+                        widget.onTogglePin(folder);
+                      }
+                      if (value == 'rename') _rename(folder);
+                      if (value == 'delete') _delete(folder);
+                    },
+                    itemBuilder: (_) => [
+                      PopupMenuItem(
+                        value: 'pin',
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(pinnedFolderIds.contains(folder.id) ? Icons.push_pin : Icons.push_pin_outlined),
+                          title: Text(pinnedFolderIds.contains(folder.id) ? 'برداشتن سنجاق' : 'سنجاق کردن پوشه'),
+                        ),
+                      ),
+                      const PopupMenuItem(value: 'rename', child: Text('تغییر نام')),
+                      const PopupMenuItem(value: 'delete', child: Text('حذف پوشه')),
                     ],
                   ),
                 );
