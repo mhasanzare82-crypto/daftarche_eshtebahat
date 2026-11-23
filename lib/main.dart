@@ -397,8 +397,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       setState((){
         themes..clear()..addAll(result.themes);
         randomThemeNames..clear()..addAll(result.randomThemeNames);
-        textColorPalette..clear()..addAll(result.textColorPalette);
-        appInterfaceFontFamily.value = result.appFontFamily;
+        textColorPalette..clear()..addAll(result.textColorPalette);        appInterfaceFontFamily.value = result.appFontFamily;
         appThemeName.value = result.appThemeName;
       });
       await persistThemes();
@@ -797,8 +796,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
         type: FileType.custom,
         allowedExtensions: ['docx'],
       );
-      if (files.isEmpty) return;
-      final imported = <Note>[];
+      if (files.isEmpty) return;      final imported = <Note>[];
       final failures = <String>[];
       for (final file in files) {
         try {
@@ -1197,7 +1195,6 @@ class _FolderManagerDialogState extends State<FolderManagerDialog> {
   late List<NoteFolder> folders;
   final Set<String> deletedIds = {};
   late final Set<String> pinnedFolderIds;
-
   @override
   void initState() {
     super.initState();
@@ -1477,6 +1474,47 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
   }
 
 
+  Future<void> selectEditorTheme() async {
+    final selected = await showDialog<NoteTheme>(
+      context: context,
+      builder: (dialogContext) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('انتخاب تم یادداشت'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView(
+              shrinkWrap: true,
+              children: widget.themes.map((theme) => ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Color(theme.backgroundColor),
+                  child: Icon(Icons.text_fields, color: Color(theme.textColor)),
+                ),
+                title: Text(theme.name),
+                selected: theme.backgroundColor == themeColor &&
+                    theme.textColor == themeTextColor &&
+                    theme.fontFamily == themeFontFamily,
+                onTap: () => Navigator.pop(dialogContext, theme),
+              )).toList(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('انصراف'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      themeColor = selected.backgroundColor;
+      themeTextColor = selected.textColor;
+      themeFontFamily = selected.fontFamily;
+    });
+  }
+
   Future<void> addImage() async {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
     if (picked == null) return;
@@ -1597,8 +1635,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
   }
 
   Future<void> _persistDraft() async {
-    _autoSaveTimer?.cancel();
-    final draft = _buildNote();
+    _autoSaveTimer?.cancel();    final draft = _buildNote();
     if (draft != null) await widget.onAutoSave(draft);
   }
 
@@ -1710,16 +1747,41 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
                 fontSize: quill.QuillToolbarFontSizeButtonOptions(items: {for (var size = 6; size <= 42; size++) '$size': '$size'}),
               ),
               multiRowsDisplay: false,
-              embedButtons: FlutterQuillEmbeds.toolbarButtons(),
+              embedButtons: const [],
               customButtons: [
                 quill.QuillToolbarCustomButtonOptions(
-                  icon: const Icon(Icons.format_size),
-                  tooltip: 'اندازه عددی متن',
-                  onPressed: setNumericFontSize,
+                  icon: const Icon(Icons.undo),
+                  tooltip: 'واگرد',
+                  onPressed: () => controller.undo(),
+                ),
+                quill.QuillToolbarCustomButtonOptions(
+                  icon: const Icon(Icons.redo),
+                  tooltip: 'انجام دوباره',
+                  onPressed: () => controller.redo(),
+                ),
+                quill.QuillToolbarCustomButtonOptions(
+                  icon: const Icon(Icons.format_align_right),
+                  tooltip: 'راست‌چین',
+                  onPressed: () => controller.formatSelection(quill.Attribute.fromKeyValue('align', 'right')),
+                ),
+                quill.QuillToolbarCustomButtonOptions(
+                  icon: const Icon(Icons.format_align_center),
+                  tooltip: 'وسط‌چین',
+                  onPressed: () => controller.formatSelection(quill.Attribute.fromKeyValue('align', 'center')),
+                ),
+                quill.QuillToolbarCustomButtonOptions(
+                  icon: const Icon(Icons.format_align_left),
+                  tooltip: 'چپ‌چین',
+                  onPressed: () => controller.formatSelection(quill.Attribute.fromKeyValue('align', 'left')),
+                ),
+                quill.QuillToolbarCustomButtonOptions(
+                  icon: const Icon(Icons.palette_outlined),
+                  tooltip: 'انتخاب تم',
+                  onPressed: selectEditorTheme,
                 ),
                 quill.QuillToolbarCustomButtonOptions(
                   icon: const Icon(Icons.add_photo_alternate_outlined),
-                  tooltip: 'افزودن عکس و نقاشی روی آن',
+                  tooltip: 'افزودن تصویر',
                   onPressed: addImage,
                 ),
                 quill.QuillToolbarCustomButtonOptions(
@@ -1727,25 +1789,27 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
                     isRecording ? Icons.stop_circle_outlined : Icons.mic_none,
                     color: isRecording ? Colors.red : null,
                   ),
-                  tooltip: isRecording ? 'پایان ضبط ویس' : 'شروع ضبط ویس',
+                  tooltip: isRecording ? 'پایان ضبط ویس' : 'اضافه کردن ویس',
                   onPressed: toggleRecording,
                 ),
               ],
               showFontFamily: true,
               showFontSize: true,
-              showBoldButton: true,
-              showItalicButton: true,
-              showUnderLineButton: true,
-              showStrikeThrough: true,
               showColorButton: true,
               showBackgroundColorButton: true,
-              showHeaderStyle: true,
               showListNumbers: true,
-              showListBullets: true,
-              showAlignmentButtons: true,
-              showQuote: true,
-              showCodeBlock: true,
-              showClearFormat: true,
+              showAlignmentButtons: false,
+              showUndo: false,
+              showRedo: false,
+              showBoldButton: false,
+              showItalicButton: false,
+              showUnderLineButton: false,
+              showStrikeThrough: false,
+              showHeaderStyle: false,
+              showListBullets: false,
+              showQuote: false,
+              showCodeBlock: false,
+              showClearFormat: false,
             ),
           ),
         ]),
