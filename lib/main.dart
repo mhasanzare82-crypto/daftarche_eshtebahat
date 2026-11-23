@@ -1724,7 +1724,6 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
           ),
         ]),
       ),
-    ),
   );
 }
 
