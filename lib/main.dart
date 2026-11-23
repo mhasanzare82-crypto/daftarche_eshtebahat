@@ -1140,9 +1140,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
 
         ])),
         Expanded(child:loading?const Center(child:CircularProgressIndicator()):items.isEmpty
-          ?(selectedFolderId != null && search.text.isEmpty
-              ? const SizedBox.shrink()
-              : Center(child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[const Icon(Icons.menu_book_rounded,size:64,color:Color(0xFF9DA3AA)),const SizedBox(height:12),Text(search.text.isEmpty?'دفترچه‌ات هنوز خالی است':'یادداشتی پیدا نشد',style:const TextStyle(fontSize:18,fontWeight:FontWeight.bold)),const SizedBox(height:8),Text(search.text.isEmpty?'اولین یادداشتت را بنویس.':'عبارت دیگری را جستجو کن.'),if(search.text.isEmpty)...[const SizedBox(height:14),FilledButton(onPressed:()=>edit(),child:const Text('نوشتن اولین یادداشت'))]])))
+          ? const SizedBox.shrink()
           :ListView.separated(padding:const EdgeInsets.fromLTRB(20,0,20,100),itemCount:items.length,separatorBuilder: (_, _) => const SizedBox(height: 10),itemBuilder:(_,i){
             final n=items[i];
             final backgroundColor = _backgroundColorFor(n);
