@@ -465,14 +465,14 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
     final scheme = Theme.of(context).colorScheme;
     return Material(
       color: selected ? scheme.primaryContainer : scheme.surfaceContainerHighest.withValues(alpha: .55),
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: selected ? scheme.primary.withValues(alpha: .55) : scheme.outlineVariant.withValues(alpha: .55),
             ),
@@ -481,15 +481,15 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 17, color: selected ? scheme.onPrimaryContainer : scheme.onSurfaceVariant),
-                const SizedBox(width: 7),
+                Icon(icon, size: 15, color: selected ? scheme.onPrimaryContainer : scheme.onSurfaceVariant),
+                if (label.isNotEmpty) const SizedBox(width: 5),
               ],
-              Text(
+              if (label.isNotEmpty) Text(
                 label,
                 style: TextStyle(
                   color: selected ? scheme.onPrimaryContainer : scheme.onSurfaceVariant,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  fontSize: 13,
+                  fontSize: 12,
                 ),
               ),
             ],
@@ -1127,7 +1127,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
                 Padding(
                   padding: const EdgeInsets.only(left: 8),
                   child: _folderFilterChip(
-                    label: 'مدیریت پوشه‌ها',
+                    label: '',
                     selected: false,
                     onTap: manageFolders,
                     icon: Icons.folder_special_outlined,
