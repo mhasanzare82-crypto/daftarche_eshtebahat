@@ -1284,7 +1284,7 @@ class _FolderManagerDialogState extends State<FolderManagerDialog> {
           : ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: folders.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
+              separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (context, index) {
                 final folder = folders[index];
                 return ListTile(
