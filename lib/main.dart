@@ -1473,7 +1473,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     // Set the Quill image width attribute directly. The image embed builder
     // reads this attribute and constrains the displayed image to the editor's
     // available width; its height remains automatic to preserve aspect ratio.
-    final imageWidth = MediaQuery.sizeOf(context).width - 32;
+    final imageWidth = MediaQuery.sizeOf(context).width;
     final imageDelta = delta.Delta()
       ..retain(index)
       ..insert(
