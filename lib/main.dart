@@ -1359,9 +1359,35 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
       'نمونه یک فونت · $family': family,
   };
 
+  double get _availableScreenWidth {
+    final views = WidgetsBinding.instance.platformDispatcher.views;
+    if (views.isEmpty) return 360;
+    final view = views.first;
+    return view.physicalSize.width / view.devicePixelRatio;
+  }
+
   quill.Document _loadDocument(String? body, List<String> legacyImages) {
     if (body != null && body.startsWith(marker)) {
-      try { return quill.Document.fromJson(jsonDecode(body.substring(marker.length)) as List); } catch (_) {}
+      try {
+        final rawDelta = jsonDecode(body.substring(marker.length)) as List;
+        final screenWidth = _availableScreenWidth;
+        final normalizedDelta = rawDelta.map((rawOp) {
+          final op = Map<String, dynamic>.from(rawOp as Map);
+          final insert = op['insert'];
+          if (insert is Map && insert['image'] is String) {
+            final attributes = Map<String, dynamic>.from(
+              (op['attributes'] as Map?) ?? const <String, dynamic>{},
+            );
+            // flutter_quill_extensions reads image sizing from the CSS-like
+            // "style" attribute. A numeric "width" attribute is ignored.
+            // Set width only so the source aspect ratio determines the height.
+            attributes['style'] = 'width: ${screenWidth}px;';
+            op['attributes'] = attributes;
+          }
+          return op;
+        }).toList();
+        return quill.Document.fromJson(normalizedDelta);
+      } catch (_) {}
     }
     final old = _decodeNoteBlocks(body ?? '');
     final ops = <Map<String, dynamic>>[];
@@ -1470,15 +1496,15 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     );
     if (!mounted || selectedPath == null) return;
     final index = controller.selection.extentOffset.clamp(0, controller.document.length - 1);
-    // Set the Quill image width attribute directly. The image embed builder
-    // reads this attribute and constrains the displayed image to the editor's
-    // available width; its height remains automatic to preserve aspect ratio.
+    // flutter_quill_extensions reads image dimensions from its CSS-like
+    // "style" attribute. Use the full logical screen width and leave height
+    // unset so the image keeps its original aspect ratio.
     final imageWidth = MediaQuery.sizeOf(context).width;
     final imageDelta = delta.Delta()
       ..retain(index)
       ..insert(
         {'image': selectedPath},
-        {'width': imageWidth},
+        {'style': 'width: ${imageWidth}px;'},
       )
       ..insert('\n');
     controller.document.compose(imageDelta, quill.ChangeSource.local);
