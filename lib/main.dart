@@ -2238,6 +2238,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
               Expanded(
                 child: TextField(
                   controller: title,
+                  readOnly: _appendTarget != null,
                   autofocus: false,
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(themeTextColor), fontFamily: themeFontFamily),
                   decoration: const InputDecoration(hintText: 'عنوان یادداشت', border: InputBorder.none),
@@ -2245,7 +2246,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
               ),
               IconButton(
                 tooltip: 'انتخاب از عنوان‌های قبلی',
-                onPressed: widget.previousTitles.isEmpty ? null : _choosePreviousTitle,
+                onPressed: widget.note != null || widget.previousTitles.isEmpty ? null : _choosePreviousTitle,
                 icon: const Icon(Icons.add_circle_outline),
                 color: Color(themeTextColor),
               ),
