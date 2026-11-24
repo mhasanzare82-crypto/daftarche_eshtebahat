@@ -719,27 +719,1301 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
     final operations = <Map<String, dynamic>>[];
     final imagePaths = <String>[];
     final paragraphs = xml.descendants.whereType<XmlElement>().where((e) => e.name.local == 'p').toList();
-    // Only treat the first paragraph as the note title when the DOCX explicitly
-    // marks it as Title/Subtitle. Ordinary first paragraphs are document content
-    // and must never be silently discarded during import.
-    final firstParagraph = paragraphs.isEmpty ? null : paragraphs.first;
-    final firstStyle = firstParagraph?.children
-        .whereType<XmlElement>()
-        .where((e) => e.name.local == 'pPr')
-        .firstOrNull
-        ?.descendants.whereType<XmlElement>()
-        .where((e) => e.name.local == 'pStyle')
-        .firstOrNull
-        ?.attributes.where((a) => a.name.local == 'val')
-        .map((a) => a.value).firstOrNull ?? '';
-    final hasTitleParagraph = firstStyle.toLowerCase() == 'title' ||
-        firstStyle.toLowerCase() == 'subtitle';
-    final importedTitle = hasTitleParagraph
-        ? firstParagraph!.descendants.whereType<XmlElement>()
-            .where((e) => e.name.local == 't')
-            .map((e) => e.innerText).join().trim()
-        : '';
-    for (final paragraph in paragraphs.skip(hasTitleParagraph ? 1 : 0)) {
+    // The imported note title always comes from the source filename.
+    // Keep every DOCX paragraph in the note body, including Title/Subtitle
+    // styled paragraphs, so no document text is silently discarded.
+    final importedTitle = file.name
+        .replaceFirst(RegExp(r'\.docx
+      final pPr = paragraph.children.whereType<XmlElement>().where((e) => e.name.local == 'pPr').firstOrNull;
+      final lineAttrs = <String, dynamic>{};
+      if (pPr != null) {
+        final style = pPr.descendants.whereType<XmlElement>().where((e) => e.name.local == 'pStyle').firstOrNull;
+        final styleVal = style?.attributes.where((a) => a.name.local == 'val').map((a) => a.value).firstOrNull ?? '';
+        final heading = RegExp(r'Heading([1-3])', caseSensitive: false).firstMatch(styleVal);
+        if (heading != null) lineAttrs['header'] = int.parse(heading.group(1)!);
+        final jc = pPr.descendants.whereType<XmlElement>().where((e) => e.name.local == 'jc').firstOrNull;
+        final align = jc?.attributes.where((a) => a.name.local == 'val').map((a) => a.value).firstOrNull;
+        if (align != null) lineAttrs['align'] = align;
+        final numId = pPr.descendants.whereType<XmlElement>().where((e) => e.name.local == 'numId').firstOrNull?.attributes.where((a) => a.name.local == 'val').map((a) => a.value).firstOrNull;
+        if (numId != null) { final format = numberingFormats[numId]; lineAttrs['list'] = format == null || format == 'bullet' ? 'bullet' : 'ordered'; }
+      }
+      for (final run in paragraph.descendants.whereType<XmlElement>().where((e) => e.name.local == 'r')) {
+        final rPr = run.children.whereType<XmlElement>().where((e) => e.name.local == 'rPr').firstOrNull;
+        final attrs = <String, dynamic>{};
+        if (rPr != null) {
+          if (rPr.descendants.whereType<XmlElement>().any((e) => e.name.local == 'b')) attrs['bold'] = true;
+          if (rPr.descendants.whereType<XmlElement>().any((e) => e.name.local == 'i')) attrs['italic'] = true;
+          if (rPr.descendants.whereType<XmlElement>().any((e) => e.name.local == 'u')) attrs['underline'] = true;
+          if (rPr.descendants.whereType<XmlElement>().any((e) => e.name.local == 'strike')) attrs['strike'] = true;
+          final color = rPr.descendants.whereType<XmlElement>().where((e) => e.name.local == 'color').firstOrNull;
+          final colorValue = color?.attributes.where((a) => a.name.local == 'val').map((a) => a.value).firstOrNull;
+          if (colorValue != null && RegExp(r'^[0-9a-fA-F]{6}$').hasMatch(colorValue)) attrs['color'] = colorValue;
+          final shade = rPr.descendants.whereType<XmlElement>().where((e) => e.name.local == 'shd').firstOrNull;
+          final shadeValue = shade?.attributes.where((a) => a.name.local == 'fill').map((a) => a.value).firstOrNull;
+          if (shadeValue != null && RegExp(r'^[0-9a-fA-F]{6}$').hasMatch(shadeValue)) attrs['background'] = shadeValue;
+          final size = rPr.descendants.whereType<XmlElement>().where((e) => e.name.local == 'sz').firstOrNull;
+          final sizeValue = size?.attributes.where((a) => a.name.local == 'val').map((a) => a.value).firstOrNull;
+          if (sizeValue != null) { final parsed = int.tryParse(sizeValue); if (parsed != null) attrs['size'] = (parsed / 2).toString(); }
+          final fonts = rPr.descendants.whereType<XmlElement>().where((e) => e.name.local == 'rFonts').firstOrNull;
+          final fontValue = fonts?.attributes.where((a) => a.name.local == 'ascii').map((a) => a.value).firstOrNull;
+          if (fontValue != null) attrs['font'] = fontValue;
+        }
+        for (final textElement in run.descendants.whereType<XmlElement>().where((e) => e.name.local == 't')) {
+          if (textElement.innerText.isNotEmpty) operations.add({'insert': textElement.innerText, if (attrs.isNotEmpty) 'attributes': attrs});
+        }
+        for (final blip in run.descendants.whereType<XmlElement>().where((e) => e.name.local == 'blip')) {
+          final rid = blip.attributes.where((a) => a.name.local == 'embed').map((a) => a.value).firstOrNull;
+          final target = rid == null ? null : relationships[rid];
+          if (target == null) continue;
+          final mediaPath = target.startsWith('/') ? target.substring(1) : target.startsWith('../') ? 'word/${target.substring(3)}' : 'word/$target';
+          final normalized = mediaPath;
+          final mediaFile = zip.findFile(normalized) ?? zip.findFile(mediaPath);
+          if (mediaFile == null) continue;
+          final ext = normalized.contains('.') ? normalized.substring(normalized.lastIndexOf('.')) : '.png';
+          final path = '${imageDir.path}/imported_${DateTime.now().microsecondsSinceEpoch}_${imagePaths.length}$ext';
+          await File(path).writeAsBytes(mediaFile.content as List<int>);
+          imagePaths.add(path);
+          operations.add({'insert': {'image': path}});
+        }
+      }
+      operations.add({'insert': '\n', if (lineAttrs.isNotEmpty) 'attributes': lineAttrs});
+    }
+    if (operations.isEmpty) operations.add({'insert': '\n'});
+    final id = DateTime.now().microsecondsSinceEpoch.toString();
+    return Note(id, importedTitle, '__quill_note_v1__${jsonEncode(operations)}', DateTime.now(), imagePaths);
+  }
+
+  Future<void> importDocx() async {
+    try {
+      final files = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['docx'],
+      );
+      if (files.isEmpty) return;      final imported = <Note>[];
+      final failures = <String>[];
+      for (final file in files) {
+        try {
+          final note = await _noteFromDocx(file);
+          if (note != null) {
+            imported.add(note);
+          } else {
+            failures.add(file.name);
+          }
+        } catch (error) {
+          debugPrint('DOCX import failed for ${file.name}: $error');
+          failures.add(file.name);
+        }
+      }
+      if (imported.isNotEmpty) {
+        setState(() => notes.addAll(imported));
+        await persist();
+      }
+      if (mounted) {
+        final message = failures.isEmpty
+            ? '${imported.length} فایل Word با موفقیت وارد شد'
+            : '${imported.length} فایل وارد شد؛ ${failures.length} فایل ناموفق بود: ${failures.take(2).join('، ')}';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+    } catch (error) {
+      debugPrint('DOCX import selection failed: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('ورود فایل‌ها انجام نشد: $error')),
+        );
+      }
+    }
+  }
+
+  Future<void> createBackup() async {
+    try {
+      final imageData = <String, String>{};
+      for (final note in notes) {
+        final paths = <String>{...note.images, ..._decodeNoteBlocks(note.body)
+            .where((b) => b['type'] == 'image').map((b) => b['path'] as String),
+          if (note.body.startsWith(_quillNoteMarker)) ...((jsonDecode(note.body.substring(_quillNoteMarker.length)) as List)
+            .whereType<Map>().map((op) => op['insert']).whereType<Map>()
+            .map((insert) => insert['image']).whereType<String>().where((path) => !path.startsWith('http')))};
+        for (final path in paths) {
+          final file = File(path);
+          if (await file.exists()) imageData[path] = base64Encode(await file.readAsBytes());
+        }
+      }
+      final backup = jsonEncode({
+        'format': 'persian_notebook_backup', 'version': 1,
+        'createdAt': DateTime.now().toIso8601String(),
+        'notes': notes.map((n) => n.toJson()).toList(),
+        'folders': folders.map((f) => f.toJson()).toList(),
+        'pinnedNoteIds': pinnedNoteIds.toList(),
+        'pinnedFolderIds': pinnedFolderIds.toList(),
+        'themes': themes.map((t) => t.toJson()).toList(),
+        'textColorPalette': textColorPalette,
+        'images': imageData,
+      });
+      await FilePicker.saveFile(fileName: 'notebook_backup.json',
+          bytes: Uint8List.fromList(utf8.encode(backup)));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('ساخت نسخه پشتیبان ناموفق بود: $e')));
+    }
+  }
+
+  Future<void> restoreBackup() async {
+    try {
+      final confirmed = await showDialog<bool>(context: context, builder: (dialogContext) => AlertDialog(
+        title: const Text('بازیابی نسخه پشتیبان؟'),
+        content: const Text('یادداشت‌ها، پوشه‌ها و تم‌های فعلی با اطلاعات فایل پشتیبان جایگزین می‌شوند.'),
+        actions: [TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('انصراف')), FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('ادامه'))],
+      ));
+      if (confirmed != true) return;
+      final file = await FilePicker.pickFile(type: FileType.custom,
+          allowedExtensions: ['json']);
+      if (file == null) return;
+      final bytes = await file.readAsBytes();
+      final data = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+      if (data['format'] != 'persian_notebook_backup' || data['version'] != 1) {
+        throw const FormatException('فرمت فایل پشتیبان معتبر نیست');
+      }
+      final dir = await getApplicationDocumentsDirectory();
+      final imageDir = Directory('${dir.path}/notebook_images');
+      if (!await imageDir.exists()) await imageDir.create(recursive: true);
+      final restoredPaths = <String, String>{};
+      final images = Map<String, dynamic>.from(data['images'] ?? {});
+      for (final entry in images.entries) {
+        final oldPath = entry.key;
+        final extension = oldPath.contains('.') ? oldPath.substring(oldPath.lastIndexOf('.')) : '.jpg';
+        final newPath = '${imageDir.path}/restored_${DateTime.now().microsecondsSinceEpoch}_${restoredPaths.length}$extension';
+        await File(newPath).writeAsBytes(base64Decode(entry.value as String));
+        restoredPaths[oldPath] = newPath;
+      }
+      final restoredNotes = (data['notes'] as List).map((raw) {
+        final n = Note.fromJson(Map<String, dynamic>.from(raw));
+        var body = n.body;
+        if (n.body.startsWith('__quill_note_v1__')) {
+          final delta = (jsonDecode(n.body.substring('__quill_note_v1__'.length)) as List).map((rawOp) {
+            final op = Map<String, dynamic>.from(rawOp as Map);
+            if (op['insert'] is Map) {
+              final insert = Map<String, dynamic>.from(op['insert'] as Map);
+              final image = insert['image'];
+              if (image is String && restoredPaths.containsKey(image)) {
+                op['insert'] = {...insert, 'image': restoredPaths[image]};
+              }
+            }
+            return op;
+          }).toList();
+          body = '__quill_note_v1__${jsonEncode(delta)}';
+        } else if (n.body.startsWith('__rich_note_v1__')) {
+          final blocks = _decodeNoteBlocks(n.body).map((block) {
+            if (block['type'] == 'image' && restoredPaths.containsKey(block['path'])) {
+              return {...block, 'path': restoredPaths[block['path']]};
+            }
+            return block;
+          }).toList();
+          body = '__rich_note_v1__${jsonEncode(blocks)}';
+        }
+        return Note(n.id, n.title, body, n.updated,
+          n.images.map((path) => restoredPaths[path] ?? path).toList(),
+          n.themeColor, n.themeTextColor, n.themeFontFamily, n.folderId);
+      }).toList();
+      setState(() {
+        notes..clear()..addAll(restoredNotes);
+        folders..clear()..addAll((data['folders'] as List? ?? []).map((e) => NoteFolder.fromJson(Map<String, dynamic>.from(e))));
+        themes..clear()..addAll((data['themes'] as List? ?? []).map((e) => NoteTheme.fromJson(Map<String, dynamic>.from(e))));
+        if (themes.isEmpty) themes.addAll(defaultThemes);
+        selectedFolderId = null;
+        showUnfiledOnly = true;
+        showPinnedOnly = false;
+        pinnedNoteIds..clear()..addAll(List<String>.from(data['pinnedNoteIds'] ?? const []));
+        pinnedFolderIds..clear()..addAll(List<String>.from(data['pinnedFolderIds'] ?? const []));
+        textColorPalette..clear()..addAll(List<int>.from(data['textColorPalette'] ?? const []));
+      });
+      await persist(); await persistFolders(); await persistThemes();
+      await persistPinnedNotes(); await persistPinnedFolders();
+      await repository.saveTextColorPalette(textColorPalette);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('نسخه پشتیبان با موفقیت بازیابی شد')));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('بازیابی نسخه پشتیبان ناموفق بود: $e')));
+    }
+  }
+
+  Future<void> playNoteAudio(String path) async {
+    final file = File(path);
+    if (!await file.exists()) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('فایل ویس پیدا نشد.')),
+        );
+      }
+      return;
+    }
+    try {
+      if (currentlyPlayingAudio == path && noteAudioPlayer.state == PlayerState.playing) {
+        await noteAudioPlayer.pause();
+        if (mounted) setState(() => currentlyPlayingAudio = null);
+        return;
+      }
+      await noteAudioPlayer.stop();
+      if (!mounted) return;
+      setState(() => currentlyPlayingAudio = path);
+      await noteAudioPlayer.play(DeviceFileSource(path));
+    } catch (error) {
+      if (mounted) {
+        setState(() => currentlyPlayingAudio = null);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('پخش ویس ناموفق بود: $error')),
+        );
+      }
+    }
+  }
+
+  Future<void> changeNoteTheme(Note note) async {
+    if (themes.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('هنوز تمی برای انتخاب وجود ندارد.')),
+        );
+      }
+      return;
+    }
+
+    final selectedTheme = await showDialog<NoteTheme>(
+      context: context,
+      builder: (dialogContext) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('انتخاب تم یادداشت'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: themes.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final theme = themes[index];
+                final isSelected = note.themeColor == theme.backgroundColor &&
+                    note.themeTextColor == theme.textColor &&
+                    note.themeFontFamily == theme.fontFamily;
+                return Material(
+                  color: Color(theme.backgroundColor),
+                  borderRadius: BorderRadius.circular(12),
+                  child: ListTile(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                        color: isSelected
+                            ? Theme.of(context).colorScheme.primary
+                            : Color(theme.textColor).withValues(alpha: .18),
+                        width: isSelected ? 2 : 1,
+                      ),
+                    ),
+                    leading: CircleAvatar(
+                      backgroundColor: Color(theme.textColor),
+                      child: Icon(Icons.text_fields, color: Color(theme.backgroundColor)),
+                    ),
+                    title: Text(
+                      theme.name,
+                      style: TextStyle(
+                        color: Color(theme.textColor),
+                        fontFamily: theme.fontFamily,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'پیش‌نمایش متن یادداشت',
+                      style: TextStyle(
+                        color: Color(theme.textColor).withValues(alpha: .75),
+                        fontFamily: theme.fontFamily,
+                      ),
+                    ),
+                    trailing: isSelected
+                        ? Icon(Icons.check_circle, color: Color(theme.textColor))
+                        : null,
+                    onTap: () => Navigator.pop(dialogContext, theme),
+                  ),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('انصراف'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (selectedTheme == null || !mounted) return;
+    final index = notes.indexWhere((item) => item.id == note.id);
+    if (index < 0) return;
+    final current = notes[index];
+    setState(() {
+      notes[index] = Note(
+        current.id,
+        current.title,
+        current.body,
+        DateTime.now(),
+        List<String>.of(current.images),
+        selectedTheme.backgroundColor,
+        selectedTheme.textColor,
+        selectedTheme.fontFamily,
+        current.folderId,
+        List<String>.of(current.audios),
+      );
+      noteBackgroundColors.remove(current.id);
+      if (featuredNote?.id == current.id) featuredNote = notes[index];
+    });
+    await persist();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تم «${selectedTheme.name}» برای این یادداشت اعمال شد.')),
+      );
+    }
+  }
+
+  void showNoteMenu(Note note) {
+    showModalBottomSheet<void>(context: context, builder: (sheetContext) =>
+      Directionality(textDirection: TextDirection.rtl, child: SafeArea(child: Wrap(children: [
+        ListTile(leading: Icon(pinnedNoteIds.contains(note.id) ? Icons.push_pin : Icons.push_pin_outlined),
+          title: Text(pinnedNoteIds.contains(note.id) ? 'برداشتن سنجاق یادداشت' : 'سنجاق کردن یادداشت'),
+          onTap: () { Navigator.pop(sheetContext); togglePinnedNote(note); }),
+        ListTile(leading: const Icon(Icons.file_download_outlined),
+          title: const Text('خروجی Word برای این یادداشت'),
+          onTap: () { Navigator.pop(sheetContext); exportDocx([note]); }),
+        ListTile(leading: const Icon(Icons.file_open_outlined),
+          title: const Text('وارد کردن فایل Word'),
+          onTap: () { Navigator.pop(sheetContext); importDocx(); }),
+        ListTile(
+          leading: const Icon(Icons.palette_outlined),
+          title: const Text('تغییر تم'),
+          onTap: () { Navigator.pop(sheetContext); changeNoteTheme(note); },
+        ),
+        ListTile(leading: const Icon(Icons.drive_file_move_outline),
+          title: const Text('انتقال به پوشه'),
+          onTap: () { Navigator.pop(sheetContext); moveNote(note); }),
+        ListTile(leading: const Icon(Icons.delete_outline, color: Colors.red),
+          title: const Text('حذف یادداشت'),
+          onTap: () { Navigator.pop(sheetContext); remove(note); }),
+      ]))));
+  }
+
+  String date(DateTime d) => '${d.year}/${d.month.toString().padLeft(2, '0')}/${d.day.toString().padLeft(2, '0')}';
+  @override
+  void dispose(){WidgetsBinding.instance.removeObserver(this);search.dispose();noteAudioPlayer.dispose();super.dispose();}
+  @override
+  Widget build(BuildContext context){
+    final items=filtered;
+    final visibleFolders=List<NoteFolder>.of(folders)..sort((a,b){
+      final pinOrder=(pinnedFolderIds.contains(b.id)?1:0).compareTo(pinnedFolderIds.contains(a.id)?1:0);
+      return pinOrder!=0?pinOrder:a.name.compareTo(b.name);
+    });
+    return Directionality(textDirection:TextDirection.rtl,child:Scaffold(
+      appBar:AppBar(title:const Text('دفترچه اشتباهات',style:TextStyle(fontWeight:FontWeight.bold)),actions:[PopupMenuButton<String>(tooltip:'ورود و خروجی فایل‌ها',onSelected:(value){if(value=='import')importDocx();if(value=='export')exportDocx(notes);if(value=='backup')createBackup();if(value=='restore')restoreBackup();},itemBuilder:(context)=>const [PopupMenuItem(value:'import',child:ListTile(leading:Icon(Icons.file_open),title:Text('ورود گروهی DOCX'))),PopupMenuItem(value:'export',child:ListTile(leading:Icon(Icons.file_download),title:Text('خروجی گروهی DOCX'))),PopupMenuDivider(),PopupMenuItem(value:'backup',child:ListTile(leading:Icon(Icons.backup_outlined),title:Text('ساخت فایل پشتیبان'))),PopupMenuItem(value:'restore',child:ListTile(leading:Icon(Icons.settings_backup_restore),title:Text('بازیابی فایل پشتیبان')))]) ,IconButton(tooltip:'مدیریت تم‌ها',onPressed:manageThemes,icon:const Icon(Icons.palette_outlined))]),
+      floatingActionButton:FloatingActionButton.extended(onPressed:()=>edit(),icon:const Icon(Icons.edit_note_rounded),label:const Text('یادداشت جدید')),
+      body:SafeArea(child:Column(children:[
+        if(!loading && featuredNote != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 4),
+            child: Builder(builder: (context) {
+              const background = Color(0xFF17191C);
+              const foreground = Color(0xFFE5E7EA);
+              const accent = Color(0xFF454B52);
+              return Material(
+                color: background,
+                borderRadius: BorderRadius.circular(22),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: () => edit(note: featuredNote),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(18, 15, 18, 17),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topRight,
+                        end: Alignment.bottomLeft,
+                        colors: [background, const Color(0xFF30343A)],
+                      ),
+                      border: Border.all(color: foreground.withValues(alpha: .12)),
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: accent,
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.auto_awesome_rounded, size: 14, color: foreground.withValues(alpha: .85)),
+                                ],
+                              ),
+                            ),
+                            const Spacer(),
+                            Icon(Icons.format_quote_rounded, size: 25, color: foreground.withValues(alpha: .22)),
+                          ],
+                        ),
+                        const SizedBox(height: 13),
+                        Text(
+                          featuredNote!.title.isEmpty ? 'بدون عنوان' : featuredNote!.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.start,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                            height: 1.45,
+                            color: foreground,
+                            fontFamily: featuredNote!.themeFontFamily,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Container(
+                            width: 34,
+                            height: 3,
+                            decoration: BoxDecoration(
+                              color: foreground.withValues(alpha: .25),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        Padding(padding:const EdgeInsets.fromLTRB(20,8,20,18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+          TextField(controller:search,decoration:InputDecoration(hintText:'جستجو در یادداشت‌ها...',filled:true,fillColor:Colors.white,border:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide.none))),
+          const SizedBox(height:8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: _folderFilterChip(
+                    label: 'همه',
+                    selected: showUnfiledOnly && !showPinnedOnly,
+                    onTap: () => setState(() { selectedFolderId = null; showUnfiledOnly = true; showPinnedOnly = false; }),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: _folderFilterChip(
+                    label: 'سنجاق‌شده‌ها',
+                    selected: showPinnedOnly,
+                    onTap: () => setState(() { selectedFolderId = null; showUnfiledOnly = false; showPinnedOnly = true; }),
+                    icon: Icons.push_pin_rounded,
+                  ),
+                ),
+                ...visibleFolders.map((folder) => Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    _folderFilterChip(
+                      label: folder.name,
+                      selected: selectedFolderId == folder.id && !showPinnedOnly,
+                      onTap: () => setState(() { selectedFolderId = folder.id; showUnfiledOnly = false; showPinnedOnly = false; }),
+                      icon: pinnedFolderIds.contains(folder.id) ? Icons.push_pin_rounded : Icons.folder_outlined,
+                    ),
+
+                  ]),                )),
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: _folderFilterChip(
+                    label: '',
+                    selected: false,
+                    onTap: manageFolders,
+                    icon: Icons.folder_special_outlined,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height:16),
+
+        ])),
+        Expanded(child:loading?const Center(child:CircularProgressIndicator()):items.isEmpty
+          ? const SizedBox.shrink()
+          :ListView.separated(padding:const EdgeInsets.fromLTRB(20,0,20,100),itemCount:items.length,separatorBuilder: (_, _) => const SizedBox(height: 10),itemBuilder:(_,i){
+            final n=items[i];
+            final backgroundColor = _backgroundColorFor(n);
+            final query = search.text.trim();
+            final matchingLines = query.isEmpty ? <String>[] : _matchingLines(n, query);
+            return Card(elevation:0,color:Color(backgroundColor),child:InkWell(onTap:()=>edit(note: n, searchQuery: query.isEmpty ? null : query),child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              Row(children:[if(pinnedNoteIds.contains(n.id))const Padding(padding:EdgeInsets.only(left:6),child:Icon(Icons.push_pin_rounded,size:17)),Expanded(child:Text(n.title.isEmpty?'بدون عنوان':n.title,style:TextStyle(fontWeight:FontWeight.bold,fontSize:16,color:Color(n.themeTextColor),fontFamily:n.themeFontFamily))),IconButton(tooltip:'گزینه‌های یادداشت',onPressed:()=>showNoteMenu(n),icon:const Icon(Icons.more_vert))]),
+              if(query.isNotEmpty && matchingLines.isNotEmpty) ...matchingLines.take(6).map((line)=>Padding(padding:const EdgeInsets.only(top:6),child:_searchHighlightedText(line,query,textColor:Color(n.themeTextColor),fontFamily:n.themeFontFamily))),
+              if(query.isNotEmpty && matchingLines.isEmpty && n.title.toLowerCase().contains(query.toLowerCase()))_searchHighlightedText('عنوان: ${n.title}',query,textColor:Color(n.themeTextColor),fontFamily:n.themeFontFamily),
+              if(query.isEmpty && _notePlainText(n.body).isNotEmpty)Text(_notePlainText(n.body),maxLines:3,overflow:TextOverflow.ellipsis,style:TextStyle(color:Color(n.themeTextColor),fontFamily:n.themeFontFamily)),
+              if(n.images.isNotEmpty)Padding(padding:const EdgeInsets.only(top:8),child:Text('${n.images.length} تصویر پیوست شده',style:TextStyle(color:Color(n.themeTextColor).withValues(alpha: .7),fontSize:12,fontFamily:n.themeFontFamily))),
+              if(n.audios.isNotEmpty)Padding(
+                padding:const EdgeInsets.only(top:8),
+                child:Wrap(
+                  spacing:6,
+                  runSpacing:4,
+                  children:[
+                    for(var audioIndex=0;audioIndex<n.audios.length;audioIndex++)
+                      ActionChip(
+                        avatar:Icon(
+                          currentlyPlayingAudio==n.audios[audioIndex]
+                              ? Icons.volume_up_rounded
+                              : Icons.play_arrow_rounded,
+                          size:18,
+                          color:Color(n.themeTextColor),
+                        ),
+                        label:Text('پخش ویس ${audioIndex+1}',style:TextStyle(color:Color(n.themeTextColor),fontFamily:n.themeFontFamily)),
+                        onPressed:()=>playNoteAudio(n.audios[audioIndex]),
+                        backgroundColor:Color(backgroundColor).withValues(alpha: .75),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height:8),Text(date(n.updated),style:TextStyle(fontSize:11,color:Color(n.themeTextColor).withValues(alpha: .65),fontFamily:n.themeFontFamily)),
+            ]))));
+          })),
+      ])),
+    ));
+  }
+}
+
+class FolderManagerDialog extends StatefulWidget {
+  final List<NoteFolder> initialFolders;
+  final Future<void> Function(List<NoteFolder>, Set<String>) onSave;
+  final void Function(NoteFolder) onSelect;
+  final Set<String> initialPinnedFolderIds;
+  final Future<void> Function(NoteFolder) onTogglePin;
+  const FolderManagerDialog({super.key, required this.initialFolders, required this.onSave, required this.onSelect, required this.initialPinnedFolderIds, required this.onTogglePin});
+  @override
+  State<FolderManagerDialog> createState() => _FolderManagerDialogState();
+}
+
+class _FolderManagerDialogState extends State<FolderManagerDialog> {
+  late List<NoteFolder> folders;
+  final Set<String> deletedIds = {};
+  late final Set<String> pinnedFolderIds;
+  @override
+  void initState() {
+    super.initState();
+    folders = List.of(widget.initialFolders);
+    pinnedFolderIds = Set<String>.of(widget.initialPinnedFolderIds);
+  }
+
+  Future<String?> _askName({String title = 'نام پوشه', String initial = ''}) async {
+    final controller = TextEditingController(text: initial);
+    final value = await showDialog<String>(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: Text(title),
+          content: TextField(controller: controller, autofocus: true, maxLength: 30,
+            decoration: const InputDecoration(hintText: 'نام پوشه')),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('انصراف')),
+            FilledButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('ذخیره')),
+          ],
+        ),
+      ),
+    );
+    controller.dispose();
+    if (value == null || value.trim().isEmpty) return null;
+    return value.trim();
+  }
+
+  Future<void> _create() async {
+    final name = await _askName(title: 'ایجاد پوشه');
+    if (name == null) return;
+    setState(() => folders.add(NoteFolder(DateTime.now().microsecondsSinceEpoch.toString(), name)));
+    await widget.onSave(folders, deletedIds);
+  }
+
+  Future<void> _rename(NoteFolder folder) async {
+    final name = await _askName(title: 'تغییر نام پوشه', initial: folder.name);
+    if (name == null) return;
+    setState(() {
+      final index = folders.indexWhere((f) => f.id == folder.id);
+      if (index >= 0) folders[index] = NoteFolder(folder.id, name);
+    });
+    await widget.onSave(folders, deletedIds);
+  }
+
+  Future<void> _delete(NoteFolder folder) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => Directionality(textDirection: TextDirection.rtl, child: AlertDialog(
+        title: const Text('حذف پوشه'),
+        content: Text('پوشه «${folder.name}» حذف شود؟ یادداشت‌های آن به بخش بدون پوشه منتقل می‌شوند.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('انصراف')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('حذف')),
+        ],
+      )),
+    );
+    if (confirmed != true) return;
+    setState(() {
+      folders.removeWhere((f) => f.id == folder.id);
+      deletedIds.add(folder.id);
+    });
+    await widget.onSave(folders, deletedIds);
+  }
+
+  @override
+  Widget build(BuildContext context) => Directionality(
+    textDirection: TextDirection.rtl,
+    child: Dialog.fullscreen(
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('مدیریت پوشه‌ها'),
+          leading: IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+          actions: [IconButton(tooltip: 'ایجاد پوشه', onPressed: _create, icon: const Icon(Icons.create_new_folder_outlined))],
+        ),
+        body: folders.isEmpty
+          ? const Center(child: Text('هنوز پوشه‌ای ایجاد نشده است.'))
+          : ListView.separated(
+              padding: const EdgeInsets.all(16),
+              itemCount: folders.length,
+              separatorBuilder: (_, _) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final folder = folders[index];
+                return ListTile(
+                  leading: const Icon(Icons.folder_outlined),
+                  title: Text(folder.name),
+                  onTap: () { widget.onSelect(folder); Navigator.pop(context); },
+                  trailing: PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'pin') {
+                        setState(() {
+                          if (!pinnedFolderIds.add(folder.id)) pinnedFolderIds.remove(folder.id);
+                        });
+                        widget.onTogglePin(folder);
+                      }
+                      if (value == 'rename') _rename(folder);
+                      if (value == 'delete') _delete(folder);
+                    },
+                    itemBuilder: (_) => [
+                      PopupMenuItem(
+                        value: 'pin',
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: Icon(pinnedFolderIds.contains(folder.id) ? Icons.push_pin : Icons.push_pin_outlined),
+                          title: Text(pinnedFolderIds.contains(folder.id) ? 'برداشتن سنجاق' : 'سنجاق کردن پوشه'),
+                        ),
+                      ),
+                      const PopupMenuItem(value: 'rename', child: Text('تغییر نام')),
+                      const PopupMenuItem(value: 'delete', child: Text('حذف پوشه')),
+                    ],
+                  ),
+                );
+              },
+            ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: _create,
+          icon: const Icon(Icons.create_new_folder_outlined),
+          label: const Text('پوشه جدید'),
+        ),
+      ),
+    ),
+  );
+}
+
+class EditorPage extends StatefulWidget {
+  final Note? note;
+  final String? searchQuery;
+  final Future<void> Function(Note note) onAutoSave;
+  final List<NoteTheme> themes;
+  final List<String> customFonts;
+  final NoteTheme initialTheme;
+  final String? initialFolderId;
+  final int? backgroundColorOverride;
+  const EditorPage({super.key,this.note,this.searchQuery,required this.themes,required this.customFonts,required this.initialTheme,required this.onAutoSave, this.initialFolderId, this.backgroundColorOverride});
+  @override
+  State<EditorPage> createState()=>_EditorPageState();
+}
+
+class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
+  late final TextEditingController title;
+  late final quill.QuillController controller;
+  late final String draftId;
+  Timer? _autoSaveTimer;
+  final AudioRecorder recorder = AudioRecorder();
+  final AudioPlayer audioPlayer = AudioPlayer();
+  final List<String> audioPaths = [];
+  bool isRecording = false;
+  String? currentlyPlayingEditorAudio;
+  List<int> _searchPositions = [];
+  int _searchPositionIndex = 0;
+  late int themeColor, themeTextColor;
+  late String themeFontFamily;
+  String? folderId;
+  static const marker = '__quill_note_v1__';
+  static const builtInToolbarFonts = ['sans-serif', 'Estedad'];
+  Map<String, String> get toolbarFontFamilies => {
+    for (final family in {...builtInToolbarFonts, ...widget.customFonts, themeFontFamily})
+      'نمونه یک فونت · $family': family,
+  };
+
+  double get _availableScreenWidth {
+    final views = WidgetsBinding.instance.platformDispatcher.views;
+    if (views.isEmpty) return 360;
+    final view = views.first;
+    return view.physicalSize.width / view.devicePixelRatio;
+  }
+
+  quill.Document _loadDocument(String? body, List<String> legacyImages) {
+    if (body != null && body.startsWith(marker)) {
+      try {
+        final rawDelta = jsonDecode(body.substring(marker.length)) as List;
+        final screenWidth = _availableScreenWidth;
+        final normalizedDelta = rawDelta.map((rawOp) {
+          final op = Map<String, dynamic>.from(rawOp as Map);
+          final insert = op['insert'];
+          if (insert is Map && insert['image'] is String) {
+            final attributes = Map<String, dynamic>.from(
+              (op['attributes'] as Map?) ?? const <String, dynamic>{},
+            );
+            // flutter_quill_extensions reads image sizing from the CSS-like
+            // "style" attribute. A numeric "width" attribute is ignored.
+            // Set width only so the source aspect ratio determines the height.
+            attributes['style'] = 'width: ${screenWidth}px;';
+            op['attributes'] = attributes;
+          }
+          return op;
+        }).toList();
+        return quill.Document.fromJson(normalizedDelta);
+      } catch (_) {}
+    }
+    final old = _decodeNoteBlocks(body ?? '');
+    final ops = <Map<String, dynamic>>[];
+    for (final block in old) {
+      if (block['type'] == 'image' && block['path'] is String) {
+        ops.add({'insert': {'image': block['path']}});
+        ops.add({'insert': '\n'});
+      } else {
+        final text = block['text'] as String? ?? '';
+        if (text.isNotEmpty) ops.add({'insert': text});
+        ops.add({'insert': '\n'});
+      }
+    }
+    if (!(body?.startsWith('__rich_note_v1__') ?? false)) {
+      for (final path in legacyImages) {
+        ops.add({'insert': {'image': path}});
+        ops.add({'insert': '\n'});
+      }
+    }
+    if (ops.isEmpty) ops.add({'insert': '\n'});
+    return quill.Document.fromJson(ops);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    draftId = widget.note?.id ?? DateTime.now().microsecondsSinceEpoch.toString();
+    title = TextEditingController(text: widget.note?.title ?? '');
+    final doc = _loadDocument(widget.note?.body, widget.note?.images ?? const []);
+    audioPlayer.onPlayerComplete.listen((_) { if (mounted) setState(() => currentlyPlayingEditorAudio = null); });
+    controller = quill.QuillController(
+      document: doc,
+      selection: const TextSelection.collapsed(offset: 0),
+    );
+    if (widget.note == null) {
+      controller.formatSelection(quill.Attribute.fromKeyValue('size', '20'));
+    }
+    _rebuildSearchPositions();
+    if (widget.searchQuery != null && widget.searchQuery!.trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _searchPositions.isNotEmpty) _jumpToSearchPosition(0);
+      });
+    }
+    title.addListener(_scheduleAutoSave);
+    controller.addListener(_scheduleAutoSave);
+    themeColor = widget.backgroundColorOverride ?? widget.note?.themeColor ?? widget.initialTheme.backgroundColor;
+    themeTextColor = widget.note?.themeTextColor ?? widget.initialTheme.textColor;
+    themeFontFamily = widget.note?.themeFontFamily ?? widget.initialTheme.fontFamily;
+    folderId = widget.note?.folderId ?? widget.initialFolderId;
+    audioPaths.addAll(widget.note?.audios ?? const []);
+  }
+
+  void _rebuildSearchPositions() {
+    final query = widget.searchQuery?.trim() ?? '';
+    _searchPositions = [];
+    _searchPositionIndex = 0;
+    if (query.isEmpty) return;
+    final plain = controller.document.toPlainText();
+    final lower = plain.toLowerCase();
+    final target = query.toLowerCase();
+    var offset = 0;
+    while (offset <= lower.length - target.length) {
+      final found = lower.indexOf(target, offset);
+      if (found < 0) break;
+      _searchPositions.add(found);
+      offset = found + target.length;
+    }
+  }
+
+
+  void _jumpToSearchPosition(int index) {
+    if (_searchPositions.isEmpty || widget.searchQuery == null) return;
+    final bounded = index.clamp(0, _searchPositions.length - 1).toInt();
+    _searchPositionIndex = bounded;
+    final start = _searchPositions[bounded];
+    final end = (start + widget.searchQuery!.trim().length).clamp(start, controller.document.length - 1).toInt();
+    controller.updateSelection(TextSelection(baseOffset: start, extentOffset: end), quill.ChangeSource.local);
+    if (mounted) setState(() {});
+  }
+
+
+  void _moveSearchOccurrence(int delta) {
+    if (_searchPositions.isEmpty) return;
+    final next = (_searchPositionIndex + delta).clamp(0, _searchPositions.length - 1).toInt();
+    _jumpToSearchPosition(next);
+  }
+
+
+  Future<void> selectEditorTheme() async {
+    final selected = await showDialog<NoteTheme>(
+      context: context,
+      builder: (dialogContext) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('انتخاب تم یادداشت'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView(
+              shrinkWrap: true,
+              children: widget.themes.map((theme) => ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Color(theme.backgroundColor),
+                  child: Icon(Icons.text_fields, color: Color(theme.textColor)),
+                ),
+                title: Text(theme.name),
+                selected: theme.backgroundColor == themeColor &&
+                    theme.textColor == themeTextColor &&
+                    theme.fontFamily == themeFontFamily,
+                onTap: () => Navigator.pop(dialogContext, theme),
+              )).toList(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('انصراف'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      themeColor = selected.backgroundColor;
+      themeTextColor = selected.textColor;
+      themeFontFamily = selected.fontFamily;
+    });
+  }
+
+  Future<void> addImage() async {
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (picked == null) return;
+    final dir = await getApplicationDocumentsDirectory();
+    final folder = Directory('${dir.path}/notebook_images');
+    if (!await folder.exists()) await folder.create(recursive: true);
+    final ext = picked.path.contains('.') ? picked.path.substring(picked.path.lastIndexOf('.')) : '.jpg';
+    final originalPath = '${folder.path}/${DateTime.now().microsecondsSinceEpoch}$ext';
+    await File(picked.path).copy(originalPath);
+    if (!mounted) return;
+
+    // Open the drawing canvas immediately after choosing a photo. The user can
+    // save an annotated copy or insert the untouched original.
+    final selectedPath = await Navigator.push<String>(
+      context,
+      MaterialPageRoute(builder: (_) => DrawingPage(imagePath: originalPath)),
+    );
+    if (!mounted || selectedPath == null) return;
+    final index = controller.selection.extentOffset.clamp(0, controller.document.length - 1);
+    // flutter_quill_extensions reads image dimensions from its CSS-like
+    // "style" attribute. Use the full logical screen width and leave height
+    // unset so the image keeps its original aspect ratio.
+    final imageWidth = MediaQuery.sizeOf(context).width;
+    final imageDelta = delta.Delta()
+      ..retain(index)
+      ..insert(
+        {'image': selectedPath},
+        {'style': 'width: ${imageWidth}px;'},
+      )
+      ..insert('\n');
+    controller.document.compose(imageDelta, quill.ChangeSource.local);
+    controller.updateSelection(
+      TextSelection.collapsed(offset: index + 2),
+      quill.ChangeSource.local,
+    );
+  }
+
+  Future<void> toggleRecording() async {
+    if(isRecording){
+      final path=await recorder.stop();
+      if(path!=null&&mounted){setState(()=>audioPaths.add(path));_scheduleAutoSave();}
+      if(mounted)setState(()=>isRecording=false);
+      return;
+    }
+    if(!await recorder.hasPermission()){
+      if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('برای ضبط صدا، اجازه دسترسی به میکروفون را فعال کن.')));
+      return;
+    }
+    final dir=await getApplicationDocumentsDirectory();
+    final folder = Directory('${dir.path}/notebook_audio');
+    if(!await folder.exists())await folder.create(recursive:true);
+    final path = '${folder.path}/voice_${DateTime.now().microsecondsSinceEpoch}.m4a';
+    await recorder.start(const RecordConfig(encoder:AudioEncoder.aacLc),path:path);
+    if(mounted)setState(()=>isRecording=true);
+  }
+
+  Future<void> playAudio(String path) async {
+    try {
+      if (!await File(path).exists()) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('فایل ویس پیدا نشد.')),
+          );
+        }
+        return;
+      }
+      if (currentlyPlayingEditorAudio == path && audioPlayer.state == PlayerState.playing) {
+        await audioPlayer.pause();
+        if (mounted) setState(() => currentlyPlayingEditorAudio = null);
+        return;
+      }
+      await audioPlayer.stop();
+      if (!mounted) return;
+      setState(() => currentlyPlayingEditorAudio = path);
+      await audioPlayer.play(DeviceFileSource(path), mode: PlayerMode.mediaPlayer);
+    } catch (error) {
+      if (mounted) {
+        setState(() => currentlyPlayingEditorAudio = null);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('پخش ویس ناموفق بود: $error')),
+        );
+      }
+    }
+  }
+
+  Future<void> setNumericFontSize() async {
+    final input=TextEditingController(text:'20');
+    final value=await showDialog<double>(context:context,builder:(ctx)=>Directionality(textDirection:TextDirection.rtl,child:AlertDialog(
+      title:const Text('اندازه متن'),
+      content:TextField(controller:input,keyboardType:const TextInputType.numberWithOptions(decimal:true),decoration:const InputDecoration(labelText:'اندازه بر حسب پوینت',hintText:'مثلاً 20')),
+      actions:[TextButton(onPressed:()=>Navigator.pop(ctx),child:const Text('انصراف')),FilledButton(onPressed:(){final n=double.tryParse(input.text.trim());if(n!=null&&n>=6&&n<=42)Navigator.pop(ctx,n);},child:const Text('اعمال'))],
+    )));
+    input.dispose();
+    if(value!=null){controller.formatSelection(quill.Attribute.fromKeyValue('size',value.toString()));}
+  }
+
+  Note? _buildNote() {
+    final delta = controller.document.toDelta().toJson();
+    final plain = controller.document.toPlainText().trim();
+    final hasContent = delta.any((op) => op['insert'] is Map);
+    if (widget.note == null && title.text.trim().isEmpty && plain.isEmpty && !hasContent && audioPaths.isEmpty) return null;
+    final imagePaths = <String>[];
+    for (final op in delta) {
+      if (op['insert'] is Map) {
+        final image = (op['insert'] as Map)['image'];
+        if (image is String && !image.startsWith('http')) imagePaths.add(image);
+      }
+    }
+    return Note(
+      draftId, title.text.trim(), marker + jsonEncode(delta), DateTime.now(), imagePaths,
+      widget.note?.themeColor ?? themeColor, themeTextColor, themeFontFamily, folderId, List.of(audioPaths),
+    );
+  }
+
+  void _scheduleAutoSave() {
+    _autoSaveTimer?.cancel();
+    _autoSaveTimer = Timer(const Duration(milliseconds: 500), _persistDraft);
+  }
+
+  Future<void> _persistDraft() async {
+    _autoSaveTimer?.cancel();    final draft = _buildNote();
+    if (draft != null) await widget.onAutoSave(draft);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+      _persistDraft();
+    }
+  }
+
+  Future<void> save() async {
+    _autoSaveTimer?.cancel();
+    final note = _buildNote();
+    if (note == null) { Navigator.pop(context); return; }
+    await widget.onAutoSave(note);
+    if (mounted) Navigator.pop(context, note);
+  }
+
+  @override
+  void dispose() {
+    _autoSaveTimer?.cancel();
+    _persistDraft();
+    WidgetsBinding.instance.removeObserver(this);
+    title.removeListener(_scheduleAutoSave);
+    controller.removeListener(_scheduleAutoSave);
+    title.dispose();
+    recorder.dispose();
+    audioPlayer.dispose();
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Directionality(
+    textDirection: TextDirection.rtl,
+    child: Scaffold(
+      appBar: AppBar(title: const Text('یادداشت'), actions: [
+        if (widget.searchQuery != null && _searchPositions.isNotEmpty) ...[
+          IconButton(tooltip: 'نتیجه قبلی', onPressed: _searchPositionIndex > 0 ? () => _moveSearchOccurrence(-1) : null, icon: const Icon(Icons.keyboard_arrow_up)),
+          Center(child: Text('${_searchPositionIndex + 1} / ${_searchPositions.length}')),
+          IconButton(tooltip: 'نتیجه بعدی', onPressed: _searchPositionIndex < _searchPositions.length - 1 ? () => _moveSearchOccurrence(1) : null, icon: const Icon(Icons.keyboard_arrow_down)),
+        ],
+        TextButton.icon(onPressed: save, icon: const Icon(Icons.check), label: const Text('ذخیره')),
+      ]),
+      backgroundColor: Color(themeColor),
+      body: Column(children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
+            controller: title, autofocus: false,
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(themeTextColor), fontFamily: themeFontFamily),
+            decoration: const InputDecoration(hintText: 'عنوان یادداشت', border: InputBorder.none),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: quill.QuillEditor.basic(
+              controller: controller,
+              config: quill.QuillEditorConfig(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                placeholder: 'متن یادداشتت را اینجا بنویس...',
+                embedBuilders: FlutterQuillEmbeds.editorBuilders(
+                  imageEmbedConfig: QuillEditorImageEmbedConfig(
+                    imageProviderBuilder: (context, imageUrl) {
+                      final local = File(imageUrl);
+                      return local.existsSync() ? FileImage(local) : null;
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const Divider(height: 1),
+          if (audioPaths.isNotEmpty)
+            SizedBox(
+              height: 52,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  for (var i = 0; i < audioPaths.length; i++)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: InputChip(
+                        avatar: Icon(
+                          currentlyPlayingEditorAudio == audioPaths[i]
+                              ? Icons.pause_circle_filled
+                              : Icons.play_circle_fill,
+                        ),
+                        label: Text('پخش ویس ${i + 1}'),
+                        onPressed: () => playAudio(audioPaths[i]),
+                        onDeleted: () => setState(() {
+                          if (currentlyPlayingEditorAudio == audioPaths[i]) {
+                            audioPlayer.stop();
+                            currentlyPlayingEditorAudio = null;
+                          }
+                          audioPaths.removeAt(i);
+                          _scheduleAutoSave();
+                        }),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          quill.QuillSimpleToolbar(
+            controller: controller,
+            config: quill.QuillSimpleToolbarConfig(
+              buttonOptions: quill.QuillSimpleToolbarButtonOptions(
+                fontFamily: quill.QuillToolbarFontFamilyButtonOptions(items: toolbarFontFamilies),
+                fontSize: quill.QuillToolbarFontSizeButtonOptions(items: {for (var size = 6; size <= 42; size++) '$size': '$size'}),
+              ),
+              multiRowsDisplay: false,
+              embedButtons: const [],
+              customButtons: [
+                quill.QuillToolbarCustomButtonOptions(
+                  icon: const Icon(Icons.undo),
+                  tooltip: 'واگرد',
+                  onPressed: () => controller.undo(),
+                ),
+                quill.QuillToolbarCustomButtonOptions(
+                  icon: const Icon(Icons.redo),
+                  tooltip: 'انجام دوباره',
+                  onPressed: () => controller.redo(),
+                ),
+                quill.QuillToolbarCustomButtonOptions(
+                  icon: const Icon(Icons.format_align_right),
+                  tooltip: 'راست‌چین',
+                  onPressed: () => controller.formatSelection(quill.Attribute.fromKeyValue('align', 'right')),
+                ),
+                quill.QuillToolbarCustomButtonOptions(
+                  icon: const Icon(Icons.format_align_center),
+                  tooltip: 'وسط‌چین',
+                  onPressed: () => controller.formatSelection(quill.Attribute.fromKeyValue('align', 'center')),
+                ),
+                quill.QuillToolbarCustomButtonOptions(
+                  icon: const Icon(Icons.format_align_left),
+                  tooltip: 'چپ‌چین',
+                  onPressed: () => controller.formatSelection(quill.Attribute.fromKeyValue('align', 'left')),
+                ),
+                quill.QuillToolbarCustomButtonOptions(
+                  icon: const Icon(Icons.palette_outlined),
+                  tooltip: 'انتخاب تم',
+                  onPressed: selectEditorTheme,
+                ),
+                quill.QuillToolbarCustomButtonOptions(
+                  icon: const Icon(Icons.add_photo_alternate_outlined),
+                  tooltip: 'افزودن تصویر',
+                  onPressed: addImage,
+                ),
+                quill.QuillToolbarCustomButtonOptions(
+                  icon: Icon(
+                    isRecording ? Icons.stop_circle_outlined : Icons.mic_none,
+                    color: isRecording ? Colors.red : null,
+                  ),
+                  tooltip: isRecording ? 'پایان ضبط ویس' : 'اضافه کردن ویس',
+                  onPressed: toggleRecording,
+                ),
+              ],
+              // Whitelist only the requested toolbar controls. Every other
+              // built-in Quill action is explicitly disabled so new/default
+              // package buttons cannot leak into the editor toolbar.
+              showDividers: false,
+              showFontFamily: true,
+              showFontSize: true,
+              showBoldButton: false,
+              showItalicButton: false,
+              showSmallButton: false,
+              showUnderLineButton: false,
+              showLineHeightButton: false,
+              showStrikeThrough: false,
+              showInlineCode: false,
+              showColorButton: true,
+              showBackgroundColorButton: true,
+              showClearFormat: false,
+              showAlignmentButtons: false,
+              showLeftAlignment: false,
+              showCenterAlignment: false,
+              showRightAlignment: false,
+              showJustifyAlignment: false,
+              showHeaderStyle: false,
+              showListNumbers: true,
+              showListBullets: false,
+              showListCheck: false,
+              showCodeBlock: false,
+              showQuote: false,
+              showIndent: false,
+              showLink: false,
+              showUndo: false,
+              showRedo: false,
+              showDirection: false,
+              showSearchButton: false,
+              showSubscript: false,
+              showSuperscript: false,
+            ),
+          ),
+        ]),
+      ),
+  );
+}
+
+
+
+class Stroke{final List<Offset> points;final Color color;final double width;const Stroke(this.points,this.color,this.width);}
+class DrawingPage extends StatefulWidget{
+  final String imagePath;
+  const DrawingPage({super.key,required this.imagePath});
+  @override
+  State<DrawingPage> createState()=>_DrawingPageState();
+}
+class _DrawingPageState extends State<DrawingPage>{
+  final boundaryKey=GlobalKey();
+  final strokes=<Stroke>[];
+  List<Offset> active=[];
+  Color color=Colors.red;
+  double width=5;
+  Future<void> save()async{
+    try{
+      final boundary=boundaryKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      final image=await boundary.toImage(pixelRatio:2);
+      final data=await image.toByteData(format:ui.ImageByteFormat.png);
+      if(data==null)return;
+      final dir=await getApplicationDocumentsDirectory();
+      final folder = Directory('${dir.path}/notebook_images');
+      if(!await folder.exists())await folder.create(recursive:true);
+      final file = File('${folder.path}/drawing_${DateTime.now().microsecondsSinceEpoch}.png');
+      await file.writeAsBytes(data.buffer.asUint8List());
+      if(mounted)Navigator.pop(context,file.path);
+    }catch(_){if(mounted)ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content:Text('ذخیره تصویر انجام نشد. دوباره تلاش کن.')));}
+  }
+  @override
+  Widget build(BuildContext context)=>Directionality(textDirection:TextDirection.rtl,child:Scaffold(
+    appBar:AppBar(title:const Text('نقاشی روی عکس'),actions:[
+      IconButton(onPressed:strokes.isEmpty?null:()=>setState(()=>strokes.removeLast()),tooltip:'بازگشت یک مرحله',icon:const Icon(Icons.undo)),
+      IconButton(onPressed:()=>setState(()=>strokes.clear()),tooltip:'پاک کردن نقاشی',icon:const Icon(Icons.delete_sweep_outlined)),
+      TextButton(onPressed:()=>Navigator.pop(context,widget.imagePath),child:const Text('بدون نقاشی')),
+      TextButton.icon(onPressed:save,icon:const Icon(Icons.check),label:const Text('ذخیره')),
+    ]),
+    body:Column(children:[
+      Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),child:Row(children:[
+        for(final c in [Colors.red,Colors.blue,Colors.green,Colors.yellow,Colors.black,Colors.white])
+          GestureDetector(onTap:()=>setState(()=>color=c),child:Container(margin:const EdgeInsets.symmetric(horizontal:5),width:27,height:27,decoration:BoxDecoration(color:c,shape:BoxShape.circle,border:Border.all(color:color==c?Colors.deepPurple:Colors.grey,width:color==c?3:1)))),
+        const Spacer(),const Text('ضخامت'),SizedBox(width:100,child:Slider(value:width,min:2,max:16,onChanged:(v)=>setState(()=>width=v))),
+      ])),
+      Expanded(child:Center(child:RepaintBoundary(key:boundaryKey,child:GestureDetector(
+        onPanStart:(d)=>setState(()=>active=[d.localPosition]),
+        onPanUpdate:(d)=>setState(()=>active.add(d.localPosition)),
+        onPanEnd:(_) => setState(() { if(active.isNotEmpty) strokes.add(Stroke(List.of(active),color,width)); active=[]; }),
+        child:Stack(fit:StackFit.expand,children:[
+          Image.file(File(widget.imagePath),fit:BoxFit.contain),
+          CustomPaint(painter:DrawingPainter(strokes,active,color,width),size:Size.infinite),
+        ]),
+      )))),
+      const Padding(padding:EdgeInsets.all(10),child:Text('با انگشت روی عکس نقاشی کن و ذخیره را بزن.')),
+    ]),
+  ));
+}
+class DrawingPainter extends CustomPainter{
+  final List<Stroke> strokes;final List<Offset> active;final Color color;final double width;
+  DrawingPainter(this.strokes,this.active,this.color,this.width);
+  void draw(Canvas canvas,List<Offset> points,Color c,double w){
+    if(points.isEmpty)return;
+    final p=Paint()..color=c..strokeWidth=w..strokeCap=StrokeCap.round..strokeJoin=StrokeJoin.round..style=PaintingStyle.stroke;
+    if(points.length==1){canvas.drawCircle(points.first,w/2,Paint()..color=c);return;}
+    final path=Path()..moveTo(points.first.dx,points.first.dy);
+    for(final point in points.skip(1)){path.lineTo(point.dx,point.dy);}
+    canvas.drawPath(path,p);
+  }
+  @override
+  void paint(Canvas canvas,Size size){for(final s in strokes){draw(canvas,s.points,s.color,s.width);}draw(canvas,active,color,width);}
+  @override
+  bool shouldRepaint(covariant DrawingPainter old)=>true;
+}, caseSensitive: false), '')
+        .trim();
+    for (final paragraph in paragraphs) {
       final pPr = paragraph.children.whereType<XmlElement>().where((e) => e.name.local == 'pPr').firstOrNull;
       final lineAttrs = <String, dynamic>{};
       if (pPr != null) {
