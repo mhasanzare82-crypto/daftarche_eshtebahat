@@ -1301,11 +1301,19 @@ class _FolderManagerDialogState extends State<FolderManagerDialog> {
   late List<NoteFolder> folders;
   final Set<String> deletedIds = {};
   late final Set<String> pinnedFolderIds;
+  final ScrollController _folderScrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
     folders = List.of(widget.initialFolders);
     pinnedFolderIds = Set<String>.of(widget.initialPinnedFolderIds);
+  }
+
+  @override
+  void dispose() {
+    _folderScrollController.dispose();
+    super.dispose();
   }
 
   Future<String?> _askName({String title = 'نام پوشه', String initial = ''}) async {
@@ -1379,9 +1387,18 @@ class _FolderManagerDialogState extends State<FolderManagerDialog> {
         ),
         body: folders.isEmpty
           ? const Center(child: Text('هنوز پوشه‌ای ایجاد نشده است.'))
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: folders.length,
+          : Scrollbar(
+              controller: _folderScrollController,
+              thumbVisibility: folders.length > 5,
+              interactive: true,
+              child: ListView.separated(
+                controller: _folderScrollController,
+                primary: false,
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: ClampingScrollPhysics(),
+                ),
+                padding: const EdgeInsets.fromLTRB(16, 16, 24, 96),
+                itemCount: folders.length,
               separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (context, index) {
                 final folder = folders[index];
@@ -1414,7 +1431,8 @@ class _FolderManagerDialogState extends State<FolderManagerDialog> {
                     ],
                   ),
                 );
-              },
+                },
+              ),
             ),
         floatingActionButton: FloatingActionButton.extended(
           onPressed: _create,
