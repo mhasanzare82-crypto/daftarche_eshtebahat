@@ -820,7 +820,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
         final bytes = await _buildDocx([note]);
         var baseName = (note.title.trim().isEmpty ? 'بدون عنوان' : note.title.trim())
             .replaceAll(RegExp(r'[\\/:*?"<>|]'), '_')
-            .replaceAll(RegExp(r'\\s+'), '_');
+            .replaceAll(RegExp(r'\s+'), '_');
         if (baseName.length > 72) baseName = baseName.substring(0, 72);
         var filename = '$baseName.docx';
         var suffix = 2;
@@ -831,8 +831,8 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
         archive.addFile(ArchiveFile(filename, bytes.length, bytes));
       }
       final zipBytes = Uint8List.fromList(ZipEncoder().encode(archive));
-      await FilePicker.saveFile(fileName: 'یادداشت‌های_انتخاب‌شده.zip', bytes: zipBytes);
-      if (mounted) setState(_selectedNoteIds.clear);
+      final savedPath = await FilePicker.saveFile(fileName: 'یادداشت‌های_انتخاب‌شده.zip', bytes: zipBytes);
+      if (savedPath != null && mounted) setState(_selectedNoteIds.clear);
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
