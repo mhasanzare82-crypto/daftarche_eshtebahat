@@ -620,7 +620,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
         ? availableFonts[Random().nextInt(availableFonts.length)]
         : selected.fontFamily;
     final initialTheme = NoteTheme(selected.name, selected.backgroundColor, selected.textColor, selectedFont);
-    final result=await Navigator.push<Note>(context,MaterialPageRoute(builder:(_)=>EditorPage(note:note,searchQuery:searchQuery,themes:themes,customFonts:customFonts.keys.toList(),previousTitles:notes.map((item)=>item.title.trim()).where((value)=>value.isNotEmpty).toSet().toList(),initialTheme:initialTheme,initialFolderId:note?.folderId??selectedFolderId,backgroundColorOverride:note == null ? null : _backgroundColorFor(note),onAutoSave:(draft) async { if(!mounted)return; setState(() { final i=notes.indexWhere((n)=>n.id==draft.id); if(i<0){notes.add(draft);}else{notes[i]=draft;} }); await persist(); })));
+    final result=await Navigator.push<Note>(context,MaterialPageRoute(builder:(_)=>EditorPage(note:note,searchQuery:searchQuery,themes:themes,customFonts:customFonts.keys.toList(),previousTitles:notes.map((item)=>item.title.trim()).where((value)=>value.isNotEmpty).toSet().toList(),existingNotes:List<Note>.of(notes),initialTheme:initialTheme,initialFolderId:note?.folderId??selectedFolderId,backgroundColorOverride:note == null ? null : _backgroundColorFor(note),onAutoSave:(draft) async { if(!mounted)return; setState(() { final i=notes.indexWhere((n)=>n.id==draft.id); if(i<0){notes.add(draft);}else{notes[i]=draft;} }); await persist(); })));
     if(result==null){_refreshFeaturedNote();return;}
     setState(() { final i=notes.indexWhere((n)=>n.id==result.id); if(i<0){notes.add(result);}else{notes[i]=result;} if(featuredNote?.id==result.id)featuredNote=result; });
     await persist();
@@ -1737,10 +1737,11 @@ class EditorPage extends StatefulWidget {
   final List<NoteTheme> themes;
   final List<String> customFonts;
   final List<String> previousTitles;
+  final List<Note> existingNotes;
   final NoteTheme initialTheme;
   final String? initialFolderId;
   final int? backgroundColorOverride;
-  const EditorPage({super.key,this.note,this.searchQuery,required this.themes,required this.customFonts,required this.previousTitles,required this.initialTheme,required this.onAutoSave, this.initialFolderId, this.backgroundColorOverride});
+  const EditorPage({super.key,this.note,this.searchQuery,required this.themes,required this.customFonts,required this.previousTitles,required this.existingNotes,required this.initialTheme,required this.onAutoSave, this.initialFolderId, this.backgroundColorOverride});
   @override
   State<EditorPage> createState()=>_EditorPageState();
 }
@@ -1757,6 +1758,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
   String? currentlyPlayingEditorAudio;
   List<int> _searchPositions = [];
   int _searchPositionIndex = 0;
+  Note? _appendTarget;
   late int themeColor, themeTextColor;
   late String themeFontFamily;
   String? folderId;
@@ -2077,11 +2079,32 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     );
     searchController.dispose();
     if (selectedTitle != null && mounted) {
+      final matchingNotes = widget.existingNotes
+          .where((note) => note.title.trim() == selectedTitle.trim())
+          .toList();
+      if (matchingNotes.length > 1) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('چند یادداشت با این عنوان وجود دارد؛ برای جلوگیری از تغییر یادداشت اشتباه، ذخیره انجام نشد.')),
+        );
+        return;
+      }
+      if (matchingNotes.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('یادداشت انتخاب‌شده پیدا نشد. فهرست را به‌روزرسانی کن و دوباره تلاش کن.')),
+        );
+        return;
+      }
+
+      // Keep the original note as the append base. Autosave can then rebuild
+      // the same merged result without appending the draft repeatedly.
+      setState(() => _appendTarget = matchingNotes.single);
       title.value = TextEditingValue(
         text: selectedTitle,
         selection: TextSelection.collapsed(offset: selectedTitle.length),
       );
-      _scheduleAutoSave();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('متن جدید در انتهای یادداشت «$selectedTitle» ذخیره می‌شود.')),
+      );
     }
   }
 
@@ -2089,6 +2112,59 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     final delta = controller.document.toDelta().toJson();
     final plain = controller.document.toPlainText().trim();
     final hasContent = delta.any((op) => op['insert'] is Map);
+    if (_appendTarget != null) {
+      // Do not alter the selected note merely because its title was selected.
+      // A real text, image, or audio addition is required before saving.
+      if (plain.isEmpty && !hasContent && audioPaths.isEmpty) return null;
+
+      final target = _appendTarget!;
+      final oldDocument = _loadDocument(target.body, target.images);
+      final mergedDelta = oldDocument.toDelta().toJson()
+          .map((op) => Map<String, dynamic>.from(op))
+          .toList();
+      final appendedDelta = delta
+          .map((op) => Map<String, dynamic>.from(op))
+          .toList();
+
+      // Quill documents always end in a newline. Remove only the draft's
+      // terminal newline, then append the exact separator as its own line.
+      if (appendedDelta.isNotEmpty) {
+        final lastInsert = appendedDelta.last['insert'];
+        if (lastInsert is String && lastInsert.endsWith('\n')) {
+          final shortened = lastInsert.substring(0, lastInsert.length - 1);
+          if (shortened.isEmpty) {
+            appendedDelta.removeLast();
+          } else {
+            appendedDelta.last['insert'] = shortened;
+          }
+        }
+      }
+      mergedDelta.addAll(appendedDelta);
+      mergedDelta.add({'insert': '\n-------------------------------------------------------------------\n'});
+
+      final newImagePaths = <String>[];
+      for (final op in delta) {
+        if (op['insert'] is Map) {
+          final image = (op['insert'] as Map)['image'];
+          if (image is String && !image.startsWith('http')) newImagePaths.add(image);
+        }
+      }
+      final allImages = <String>{...target.images, ...newImagePaths}.toList();
+      final allAudios = <String>{...target.audios, ...audioPaths}.toList();
+      return Note(
+        target.id,
+        target.title,
+        marker + jsonEncode(mergedDelta),
+        DateTime.now(),
+        allImages,
+        target.themeColor,
+        target.themeTextColor,
+        target.themeFontFamily,
+        target.folderId,
+        allAudios,
+      );
+    }
+
     if (widget.note == null && title.text.trim().isEmpty && plain.isEmpty && !hasContent && audioPaths.isEmpty) return null;
     final imagePaths = <String>[];
     for (final op in delta) {
