@@ -334,17 +334,83 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
     await persistFolders();
   }
   Future<void> moveNote(Note note) async {
-    final destination=await showDialog<String?>(context:context,builder:(c)=>Directionality(textDirection:TextDirection.rtl,child:AlertDialog(
-      title:const Text('انتقال یادداشت به پوشه'),
-      content:Column(mainAxisSize:MainAxisSize.min,children:[
-        ListTile(leading:const Icon(Icons.inbox_outlined),title:const Text('بدون پوشه'),onTap:()=>Navigator.pop(c,'')),
-        ...folders.map((folder)=>ListTile(leading:const Icon(Icons.folder_outlined),title:Text(folder.name),onTap:()=>Navigator.pop(c,folder.id))),
-      ]),
-      actions:[TextButton(onPressed:()=>Navigator.pop(c),child:const Text('انصراف'))],
-    )));
-    if(destination==null)return;
-    final id=destination.isEmpty?null:destination;
-    setState((){final i=notes.indexWhere((n)=>n.id==note.id);if(i>=0){final n=notes[i];notes[i]=Note(n.id,n.title,n.body,n.updated,List.of(n.images),n.themeColor,n.themeTextColor,n.themeFontFamily,id,List.of(n.audios));}});
+    final folderScrollController = ScrollController();
+    final destination = await showDialog<String?>(
+      context: context,
+      builder: (dialogContext) {
+        final availableListHeight = MediaQuery.sizeOf(dialogContext).height * 0.55;
+        final listHeight = (folders.length * 56.0)
+            .clamp(0.0, availableListHeight)
+            .toDouble();
+
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: const Text('انتقال یادداشت به پوشه'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.inbox_outlined),
+                    title: const Text('بدون پوشه'),
+                    onTap: () => Navigator.pop(dialogContext, ''),
+                  ),
+                  if (folders.isNotEmpty)
+                    SizedBox(
+                      height: listHeight,
+                      child: Scrollbar(
+                        controller: folderScrollController,
+                        thumbVisibility: true,
+                        interactive: true,
+                        child: ListView.builder(
+                          controller: folderScrollController,
+                          primary: false,
+                          itemCount: folders.length,
+                          itemBuilder: (context, index) {
+                            final folder = folders[index];
+                            return ListTile(
+                              leading: const Icon(Icons.folder_outlined),
+                              title: Text(
+                                folder.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              onTap: () => Navigator.pop(dialogContext, folder.id),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('انصراف'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+    folderScrollController.dispose();
+
+    if (destination == null) return;
+    final id = destination.isEmpty ? null : destination;
+    setState(() {
+      final i = notes.indexWhere((n) => n.id == note.id);
+      if (i >= 0) {
+        final n = notes[i];
+        notes[i] = Note(
+          n.id, n.title, n.body, n.updated, List.of(n.images),
+          n.themeColor, n.themeTextColor, n.themeFontFamily, id,
+          List.of(n.audios),
+        );
+      }
+    });
     await persist();
   }
   Future<void> manageFolders() async {
