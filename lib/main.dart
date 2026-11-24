@@ -620,7 +620,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
         ? availableFonts[Random().nextInt(availableFonts.length)]
         : selected.fontFamily;
     final initialTheme = NoteTheme(selected.name, selected.backgroundColor, selected.textColor, selectedFont);
-    final result=await Navigator.push<Note>(context,MaterialPageRoute(builder:(_)=>EditorPage(note:note,searchQuery:searchQuery,themes:themes,customFonts:customFonts.keys.toList(),initialTheme:initialTheme,initialFolderId:note?.folderId??selectedFolderId,backgroundColorOverride:note == null ? null : _backgroundColorFor(note),onAutoSave:(draft) async { if(!mounted)return; setState(() { final i=notes.indexWhere((n)=>n.id==draft.id); if(i<0){notes.add(draft);}else{notes[i]=draft;} }); await persist(); })));
+    final result=await Navigator.push<Note>(context,MaterialPageRoute(builder:(_)=>EditorPage(note:note,searchQuery:searchQuery,themes:themes,customFonts:customFonts.keys.toList(),previousTitles:notes.map((item)=>item.title.trim()).where((value)=>value.isNotEmpty).toSet().toList(),initialTheme:initialTheme,initialFolderId:note?.folderId??selectedFolderId,backgroundColorOverride:note == null ? null : _backgroundColorFor(note),onAutoSave:(draft) async { if(!mounted)return; setState(() { final i=notes.indexWhere((n)=>n.id==draft.id); if(i<0){notes.add(draft);}else{notes[i]=draft;} }); await persist(); })));
     if(result==null){_refreshFeaturedNote();return;}
     setState(() { final i=notes.indexWhere((n)=>n.id==result.id); if(i<0){notes.add(result);}else{notes[i]=result;} if(featuredNote?.id==result.id)featuredNote=result; });
     await persist();
@@ -1736,10 +1736,11 @@ class EditorPage extends StatefulWidget {
   final Future<void> Function(Note note) onAutoSave;
   final List<NoteTheme> themes;
   final List<String> customFonts;
+  final List<String> previousTitles;
   final NoteTheme initialTheme;
   final String? initialFolderId;
   final int? backgroundColorOverride;
-  const EditorPage({super.key,this.note,this.searchQuery,required this.themes,required this.customFonts,required this.initialTheme,required this.onAutoSave, this.initialFolderId, this.backgroundColorOverride});
+  const EditorPage({super.key,this.note,this.searchQuery,required this.themes,required this.customFonts,required this.previousTitles,required this.initialTheme,required this.onAutoSave, this.initialFolderId, this.backgroundColorOverride});
   @override
   State<EditorPage> createState()=>_EditorPageState();
 }
@@ -2021,6 +2022,69 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     if(value!=null){controller.formatSelection(quill.Attribute.fromKeyValue('size',value.toString()));}
   }
 
+  Future<void> _choosePreviousTitle() async {
+    final searchController = TextEditingController();
+    final titles = widget.previousTitles
+        .where((value) => value.trim().isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final selectedTitle = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: StatefulBuilder(
+          builder: (dialogContext, refreshDialog) {
+            final query = searchController.text.trim().toLowerCase();
+            final matches = titles.where((value) => value.toLowerCase().contains(query)).toList();
+            return AlertDialog(
+              title: const Text('انتخاب عنوان قبلی'),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: MediaQuery.sizeOf(dialogContext).height * .55,
+                child: Column(children: [
+                  TextField(
+                    controller: searchController,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      prefixIcon: Icon(Icons.search),
+                      hintText: 'جستجوی عنوان‌ها',
+                    ),
+                    onChanged: (_) => refreshDialog(() {}),
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: matches.isEmpty
+                        ? const Center(child: Text('عنوانی پیدا نشد.'))
+                        : ListView.builder(
+                            itemCount: matches.length,
+                            itemBuilder: (context, index) => ListTile(
+                              dense: true,
+                              title: Text(matches[index], maxLines: 2, overflow: TextOverflow.ellipsis),
+                              onTap: () => Navigator.pop(dialogContext, matches[index]),
+                            ),
+                          ),
+                  ),
+                ]),
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+    searchController.dispose();
+    if (selectedTitle != null && mounted) {
+      title.value = TextEditingValue(
+        text: selectedTitle,
+        selection: TextSelection.collapsed(offset: selectedTitle.length),
+      );
+      _scheduleAutoSave();
+    }
+  }
+
   Note? _buildNote() {
     final delta = controller.document.toDelta().toJson();
     final plain = controller.document.toPlainText().trim();
@@ -2094,11 +2158,22 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
       body: Column(children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: TextField(
-            controller: title, autofocus: false,
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(themeTextColor), fontFamily: themeFontFamily),
-            decoration: const InputDecoration(hintText: 'عنوان یادداشت', border: InputBorder.none),
-            ),
+            child: Row(children: [
+              Expanded(
+                child: TextField(
+                  controller: title,
+                  autofocus: false,
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(themeTextColor), fontFamily: themeFontFamily),
+                  decoration: const InputDecoration(hintText: 'عنوان یادداشت', border: InputBorder.none),
+                ),
+              ),
+              IconButton(
+                tooltip: 'انتخاب از عنوان‌های قبلی',
+                onPressed: widget.previousTitles.isEmpty ? null : _choosePreviousTitle,
+                icon: const Icon(Icons.add_circle_outline),
+                color: Color(themeTextColor),
+              ),
+            ]),
           ),
           const SizedBox(height: 8),
           Expanded(
