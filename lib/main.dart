@@ -174,6 +174,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
   final AudioPlayer noteAudioPlayer = AudioPlayer();
   String? currentlyPlayingAudio;
   String? selectedFolderId;
+  bool showUnfiledOnly = true;
   bool loading=true;
   Note? featuredNote;
   final customFonts=<String, String>{};
@@ -329,7 +330,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
     controller.dispose();
     if(name==null||name.trim().isEmpty)return;
     final folder=NoteFolder(DateTime.now().microsecondsSinceEpoch.toString(),name.trim());
-    setState((){folders.add(folder);selectedFolderId=folder.id;});
+    setState((){folders.add(folder);selectedFolderId=folder.id;showUnfiledOnly=false;showPinnedOnly=false;});
     await persistFolders();
   }
   Future<void> moveNote(Note note) async {
@@ -372,7 +373,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
           await persistPinnedFolders();
         },
         onSelect: (folder) {
-          setState(() { selectedFolderId = folder.id; showPinnedOnly = false; });
+          setState(() { selectedFolderId = folder.id; showUnfiledOnly = false; showPinnedOnly = false; });
         },
         initialPinnedFolderIds: Set<String>.of(pinnedFolderIds),
         onTogglePin: togglePinnedFolder,
@@ -500,7 +501,15 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
 
   List<Note> get filtered {
     final q=search.text.trim().toLowerCase();
-    final list=notes.where((n)=>(!showPinnedOnly||pinnedNoteIds.contains(n.id))&&(selectedFolderId==null||n.folderId==selectedFolderId)&&(n.title.toLowerCase().contains(q)||_notePlainText(n.body).toLowerCase().contains(q))).toList();
+    final list=notes.where((n) =>
+      (!showPinnedOnly || pinnedNoteIds.contains(n.id)) &&
+      (showPinnedOnly
+          ? true
+          : showUnfiledOnly
+              ? n.folderId == null
+              : selectedFolderId != null && n.folderId == selectedFolderId) &&
+      (n.title.toLowerCase().contains(q) || _notePlainText(n.body).toLowerCase().contains(q))
+    ).toList();
     list.sort((a,b){
       final pinOrder=(pinnedNoteIds.contains(b.id)?1:0).compareTo(pinnedNoteIds.contains(a.id)?1:0);
       return pinOrder!=0?pinOrder:b.updated.compareTo(a.updated);
@@ -928,6 +937,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
         themes..clear()..addAll((data['themes'] as List? ?? []).map((e) => NoteTheme.fromJson(Map<String, dynamic>.from(e))));
         if (themes.isEmpty) themes.addAll(defaultThemes);
         selectedFolderId = null;
+        showUnfiledOnly = true;
         showPinnedOnly = false;
         pinnedNoteIds..clear()..addAll(List<String>.from(data['pinnedNoteIds'] ?? const []));
         pinnedFolderIds..clear()..addAll(List<String>.from(data['pinnedFolderIds'] ?? const []));
@@ -1098,8 +1108,8 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
                   padding: const EdgeInsets.only(left: 8),
                   child: _folderFilterChip(
                     label: 'همه',
-                    selected: selectedFolderId == null,
-                    onTap: () => setState(() { selectedFolderId = null; showPinnedOnly = false; }),
+                    selected: showUnfiledOnly && !showPinnedOnly,
+                    onTap: () => setState(() { selectedFolderId = null; showUnfiledOnly = true; showPinnedOnly = false; }),
                   ),
                 ),
                 Padding(
@@ -1107,7 +1117,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
                   child: _folderFilterChip(
                     label: 'سنجاق‌شده‌ها',
                     selected: showPinnedOnly,
-                    onTap: () => setState(() { selectedFolderId = null; showPinnedOnly = true; }),
+                    onTap: () => setState(() { selectedFolderId = null; showUnfiledOnly = false; showPinnedOnly = true; }),
                     icon: Icons.push_pin_rounded,
                   ),
                 ),
@@ -1117,7 +1127,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
                     _folderFilterChip(
                       label: folder.name,
                       selected: selectedFolderId == folder.id && !showPinnedOnly,
-                      onTap: () => setState(() { selectedFolderId = folder.id; showPinnedOnly = false; }),
+                      onTap: () => setState(() { selectedFolderId = folder.id; showUnfiledOnly = false; showPinnedOnly = false; }),
                       icon: pinnedFolderIds.contains(folder.id) ? Icons.push_pin_rounded : Icons.folder_outlined,
                     ),
 
