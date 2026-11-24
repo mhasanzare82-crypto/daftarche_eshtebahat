@@ -746,6 +746,106 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
     await persist();
   }
 
+  Future<void> _applyThemeToAllNotes({required bool randomize}) async {
+    if (notes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('هنوز یادداشتی برای تغییر تم وجود ندارد.')),
+      );
+      return;
+    }
+    if (themes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('هنوز تمی برای انتخاب وجود ندارد.')),
+      );
+      return;
+    }
+
+    NoteTheme? selectedTheme;
+    if (!randomize) {
+      selectedTheme = await showDialog<NoteTheme>(
+        context: context,
+        builder: (dialogContext) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            title: const Text('انتخاب تم برای تمام نوشته‌ها'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: themes.length,
+                separatorBuilder: (context, index) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final theme = themes[index];
+                  return Material(
+                    color: Color(theme.backgroundColor),
+                    borderRadius: BorderRadius.circular(12),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Color(theme.textColor),
+                        child: Icon(Icons.text_fields, color: Color(theme.backgroundColor)),
+                      ),
+                      title: Text(theme.name, style: TextStyle(
+                        color: Color(theme.textColor),
+                        fontFamily: theme.fontFamily,
+                        fontWeight: FontWeight.bold,
+                      )),
+                      subtitle: Text('پیش‌نمایش متن یادداشت', style: TextStyle(
+                        color: Color(theme.textColor),
+                        fontFamily: theme.fontFamily,
+                      )),
+                      onTap: () => Navigator.pop(dialogContext, theme),
+                    ),
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('انصراف'),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (selectedTheme == null || !mounted) return;
+    }
+
+    final random = Random();
+    setState(() {
+      for (var i = 0; i < notes.length; i++) {
+        final note = notes[i];
+        final theme = randomize
+            ? themes[random.nextInt(themes.length)]
+            : selectedTheme!;
+        notes[i] = Note(
+          note.id,
+          note.title,
+          note.body,
+          note.updated,
+          List<String>.of(note.images),
+          theme.backgroundColor,
+          theme.textColor,
+          theme.fontFamily,
+          note.folderId,
+          List<String>.of(note.audios),
+        );
+        noteBackgroundColors.remove(note.id);
+        if (featuredNote?.id == note.id) featuredNote = notes[i];
+      }
+    });
+    await persist();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(randomize
+              ? 'برای هر یادداشت یک تم تصادفی اعمال شد.'
+              : 'تم «${selectedTheme!.name}» روی تمام نوشته‌ها اعمال شد.'),
+        ),
+      );
+    }
+  }
+
   Future<void> _changeSelectedNotesTheme() async {
     final selected = _selectedNotes;
     if (selected.isEmpty) return;
@@ -1398,7 +1498,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       return pinOrder!=0?pinOrder:a.name.compareTo(b.name);
     });
     return Directionality(textDirection:TextDirection.rtl,child:Scaffold(
-      appBar:AppBar(title:Text(_selectionMode ? '${_selectedNoteIds.length} یادداشت انتخاب‌شده' : 'دفترچه اشتباهات',style:const TextStyle(fontWeight:FontWeight.bold)),leading:_selectionMode?IconButton(tooltip:'لغو انتخاب',onPressed:_clearSelection,icon:const Icon(Icons.close)):null,actions:_selectionMode?[IconButton(tooltip:'انتخاب همه',onPressed:_selectAllVisibleNotes,icon:const Icon(Icons.select_all)),IconButton(tooltip:'تغییر تم گروهی',onPressed:_changeSelectedNotesTheme,icon:const Icon(Icons.palette_outlined)),IconButton(tooltip:'انتقال گروهی',onPressed:_moveSelectedNotes,icon:const Icon(Icons.drive_file_move_outline)),IconButton(tooltip:'خروجی گروهی DOCX',onPressed:_exportSelectedNotes,icon:const Icon(Icons.archive_outlined)),IconButton(tooltip:'حذف گروهی',onPressed:_deleteSelectedNotes,icon:const Icon(Icons.delete_outline,color:Colors.red))]:[PopupMenuButton<String>(tooltip:'ورود و خروجی فایل‌ها',onSelected:(value){if(value=='import')importDocx();if(value=='export')exportDocx(notes);if(value=='backup')createBackup();if(value=='restore')restoreBackup();},itemBuilder:(context)=>const [PopupMenuItem(value:'import',child:ListTile(leading:Icon(Icons.file_open),title:Text('ورود گروهی DOCX'))),PopupMenuItem(value:'export',child:ListTile(leading:Icon(Icons.file_download),title:Text('خروجی گروهی DOCX'))),PopupMenuDivider(),PopupMenuItem(value:'backup',child:ListTile(leading:Icon(Icons.backup_outlined),title:Text('ساخت فایل پشتیبان'))),PopupMenuItem(value:'restore',child:ListTile(leading:Icon(Icons.settings_backup_restore),title:Text('بازیابی فایل پشتیبان')))]) ,IconButton(tooltip:'مدیریت تم‌ها',onPressed:manageThemes,icon:const Icon(Icons.palette_outlined))]),
+      appBar:AppBar(title:Text(_selectionMode ? '${_selectedNoteIds.length} یادداشت انتخاب‌شده' : 'دفترچه اشتباهات',style:const TextStyle(fontWeight:FontWeight.bold)),leading:_selectionMode?IconButton(tooltip:'لغو انتخاب',onPressed:_clearSelection,icon:const Icon(Icons.close)):null,actions:_selectionMode?[IconButton(tooltip:'انتخاب همه',onPressed:_selectAllVisibleNotes,icon:const Icon(Icons.select_all)),IconButton(tooltip:'تغییر تم گروهی',onPressed:_changeSelectedNotesTheme,icon:const Icon(Icons.palette_outlined)),IconButton(tooltip:'انتقال گروهی',onPressed:_moveSelectedNotes,icon:const Icon(Icons.drive_file_move_outline)),IconButton(tooltip:'خروجی گروهی DOCX',onPressed:_exportSelectedNotes,icon:const Icon(Icons.archive_outlined)),IconButton(tooltip:'حذف گروهی',onPressed:_deleteSelectedNotes,icon:const Icon(Icons.delete_outline,color:Colors.red))]:[PopupMenuButton<String>(tooltip:'اعمال تم روی همه نوشته‌ها',icon:const Icon(Icons.color_lens_outlined),onSelected:(value){if(value=='random')_applyThemeToAllNotes(randomize:true);if(value=='choose')_applyThemeToAllNotes(randomize:false);},itemBuilder:(context)=>const [PopupMenuItem(value:'random',child:ListTile(leading:Icon(Icons.shuffle_rounded),title:Text('تم تصادفی برای همه نوشته‌ها'))),PopupMenuItem(value:'choose',child:ListTile(leading:Icon(Icons.palette_outlined),title:Text('انتخاب یک تم برای همه نوشته‌ها')))]),PopupMenuButton<String>(tooltip:'ورود و خروجی فایل‌ها',onSelected:(value){if(value=='import')importDocx();if(value=='export')exportDocx(notes);if(value=='backup')createBackup();if(value=='restore')restoreBackup();},itemBuilder:(context)=>const [PopupMenuItem(value:'import',child:ListTile(leading:Icon(Icons.file_open),title:Text('ورود گروهی DOCX'))),PopupMenuItem(value:'export',child:ListTile(leading:Icon(Icons.file_download),title:Text('خروجی گروهی DOCX'))),PopupMenuDivider(),PopupMenuItem(value:'backup',child:ListTile(leading:Icon(Icons.backup_outlined),title:Text('ساخت فایل پشتیبان'))),PopupMenuItem(value:'restore',child:ListTile(leading:Icon(Icons.settings_backup_restore),title:Text('بازیابی فایل پشتیبان')))]) ,IconButton(tooltip:'مدیریت تم‌ها',onPressed:manageThemes,icon:const Icon(Icons.palette_outlined))]),
       floatingActionButton:FloatingActionButton.extended(onPressed:()=>edit(),icon:const Icon(Icons.edit_note_rounded),label:const Text('یادداشت جدید')),
       body:SafeArea(child:Column(children:[
         if(!loading && featuredNote != null)
