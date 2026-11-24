@@ -572,11 +572,14 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
     final q=search.text.trim().toLowerCase();
     final list=notes.where((n) =>
       (!showPinnedOnly || pinnedNoteIds.contains(n.id)) &&
-      (showPinnedOnly
-          ? true
-          : showUnfiledOnly
-              ? n.folderId == null
-              : selectedFolderId != null && n.folderId == selectedFolderId) &&
+      // A non-empty search is global: do not restrict matches to the
+      // currently selected folder or the unfiled-notes view.
+      (q.isNotEmpty ||
+          (showPinnedOnly
+              ? true
+              : showUnfiledOnly
+                  ? n.folderId == null
+                  : selectedFolderId != null && n.folderId == selectedFolderId)) &&
       (n.title.toLowerCase().contains(q) || _notePlainText(n.body).toLowerCase().contains(q))
     ).toList();
     list.sort((a,b){
