@@ -723,7 +723,8 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
     // Keep every DOCX paragraph in the note body, including Title/Subtitle
     // styled paragraphs, so no document text is silently discarded.
     final importedTitle = file.name
-        .replaceFirst(RegExp(r'\.docx
+        .replaceFirst(RegExp(r'\.docx$', caseSensitive: false), '');
+    for (final paragraph in paragraphs) {
       final pPr = paragraph.children.whereType<XmlElement>().where((e) => e.name.local == 'pPr').firstOrNull;
       final lineAttrs = <String, dynamic>{};
       if (pPr != null) {
