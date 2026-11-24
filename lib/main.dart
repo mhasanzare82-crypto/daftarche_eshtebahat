@@ -982,6 +982,112 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> changeNoteTheme(Note note) async {
+    if (themes.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('هنوز تمی برای انتخاب وجود ندارد.')),
+        );
+      }
+      return;
+    }
+
+    final selectedTheme = await showDialog<NoteTheme>(
+      context: context,
+      builder: (dialogContext) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('انتخاب تم یادداشت'),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: themes.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final theme = themes[index];
+                final isSelected = note.themeColor == theme.backgroundColor &&
+                    note.themeTextColor == theme.textColor &&
+                    note.themeFontFamily == theme.fontFamily;
+                return Material(
+                  color: Color(theme.backgroundColor),
+                  borderRadius: BorderRadius.circular(12),
+                  child: ListTile(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                        color: isSelected
+                            ? Theme.of(context).colorScheme.primary
+                            : Color(theme.textColor).withValues(alpha: .18),
+                        width: isSelected ? 2 : 1,
+                      ),
+                    ),
+                    leading: CircleAvatar(
+                      backgroundColor: Color(theme.textColor),
+                      child: Icon(Icons.text_fields, color: Color(theme.backgroundColor)),
+                    ),
+                    title: Text(
+                      theme.name,
+                      style: TextStyle(
+                        color: Color(theme.textColor),
+                        fontFamily: theme.fontFamily,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'پیش‌نمایش متن یادداشت',
+                      style: TextStyle(
+                        color: Color(theme.textColor).withValues(alpha: .75),
+                        fontFamily: theme.fontFamily,
+                      ),
+                    ),
+                    trailing: isSelected
+                        ? Icon(Icons.check_circle, color: Color(theme.textColor))
+                        : null,
+                    onTap: () => Navigator.pop(dialogContext, theme),
+                  ),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('انصراف'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (selectedTheme == null || !mounted) return;
+    final index = notes.indexWhere((item) => item.id == note.id);
+    if (index < 0) return;
+    final current = notes[index];
+    setState(() {
+      notes[index] = Note(
+        current.id,
+        current.title,
+        current.body,
+        DateTime.now(),
+        List<String>.of(current.images),
+        selectedTheme.backgroundColor,
+        selectedTheme.textColor,
+        selectedTheme.fontFamily,
+        current.folderId,
+        List<String>.of(current.audios),
+      );
+      noteBackgroundColors.remove(current.id);
+      if (featuredNote?.id == current.id) featuredNote = notes[index];
+    });
+    await persist();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تم «${selectedTheme.name}» برای این یادداشت اعمال شد.')),
+      );
+    }
+  }
+
   void showNoteMenu(Note note) {
     showModalBottomSheet<void>(context: context, builder: (sheetContext) =>
       Directionality(textDirection: TextDirection.rtl, child: SafeArea(child: Wrap(children: [
@@ -994,6 +1100,11 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
         ListTile(leading: const Icon(Icons.file_open_outlined),
           title: const Text('وارد کردن فایل Word'),
           onTap: () { Navigator.pop(sheetContext); importDocx(); }),
+        ListTile(
+          leading: const Icon(Icons.palette_outlined),
+          title: const Text('تغییر تم'),
+          onTap: () { Navigator.pop(sheetContext); changeNoteTheme(note); },
+        ),
         ListTile(leading: const Icon(Icons.drive_file_move_outline),
           title: const Text('انتقال به پوشه'),
           onTap: () { Navigator.pop(sheetContext); moveNote(note); }),
