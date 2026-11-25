@@ -129,7 +129,7 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
               decoration: const InputDecoration(labelText: 'فونت رابط کاربری', border: OutlineInputBorder()),
               items: fonts.map((family) => DropdownMenuItem<String>(
                 value: family,
-                child: Text(family, style: TextStyle(fontFamily: family)),
+                child: Text('متن نمونه', style: TextStyle(fontFamily: family)),
               )).toList(),
               onChanged: (value) { if (value != null) setState(() => appFontFamily = value); },
             ),
