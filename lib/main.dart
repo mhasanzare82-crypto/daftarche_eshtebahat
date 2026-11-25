@@ -186,6 +186,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
   List<Note> get _selectedNotes => filtered.where((note) => _selectedNoteIds.contains(note.id)).toList();
   final textColorPalette=<int>[];
   bool showPinnedOnly=false;
+  bool isSearchExpanded=false;
   final noteBackgroundColors=<String, int>{};
   static const defaultThemes=[NoteTheme('یاسی',0xFFEDE7F6),NoteTheme('آبی',0xFFE3F2FD),NoteTheme('سبز',0xFFE8F5E9),NoteTheme('صورتی',0xFFFCE4EC),NoteTheme('هلویی',0xFFFFEAD5)];
 
@@ -1498,7 +1499,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       return pinOrder!=0?pinOrder:a.name.compareTo(b.name);
     });
     return Directionality(textDirection:TextDirection.rtl,child:Scaffold(
-      appBar:AppBar(title:Text(_selectionMode ? '${_selectedNoteIds.length} یادداشت انتخاب‌شده' : 'دفترچه اشتباهات',style:const TextStyle(fontWeight:FontWeight.bold)),leading:_selectionMode?IconButton(tooltip:'لغو انتخاب',onPressed:_clearSelection,icon:const Icon(Icons.close)):null,actions:_selectionMode?[IconButton(tooltip:'انتخاب همه',onPressed:_selectAllVisibleNotes,icon:const Icon(Icons.select_all)),IconButton(tooltip:'تغییر تم گروهی',onPressed:_changeSelectedNotesTheme,icon:const Icon(Icons.palette_outlined)),IconButton(tooltip:'انتقال گروهی',onPressed:_moveSelectedNotes,icon:const Icon(Icons.drive_file_move_outline)),IconButton(tooltip:'خروجی گروهی DOCX',onPressed:_exportSelectedNotes,icon:const Icon(Icons.archive_outlined)),IconButton(tooltip:'حذف گروهی',onPressed:_deleteSelectedNotes,icon:const Icon(Icons.delete_outline,color:Colors.red))]:[PopupMenuButton<String>(tooltip:'گزینه‌های بیشتر',onSelected:(value){if(value=='theme_random')_applyThemeToAllNotes(randomize:true);if(value=='theme_choose')_applyThemeToAllNotes(randomize:false);if(value=='import')importDocx();if(value=='export')exportDocx(notes);if(value=='backup')createBackup();if(value=='restore')restoreBackup();},itemBuilder:(context)=>const [PopupMenuItem(value:'theme_random',child:ListTile(leading:Icon(Icons.shuffle_rounded),title:Text('تم تصادفی برای همه نوشته‌ها'))),PopupMenuItem(value:'theme_choose',child:ListTile(leading:Icon(Icons.palette_outlined),title:Text('انتخاب یک تم برای همه نوشته‌ها'))),PopupMenuDivider(),PopupMenuItem(value:'import',child:ListTile(leading:Icon(Icons.file_open),title:Text('ورود گروهی DOCX'))),PopupMenuItem(value:'export',child:ListTile(leading:Icon(Icons.file_download),title:Text('خروجی گروهی DOCX'))),PopupMenuDivider(),PopupMenuItem(value:'backup',child:ListTile(leading:Icon(Icons.backup_outlined),title:Text('ساخت فایل پشتیبان'))),PopupMenuItem(value:'restore',child:ListTile(leading:Icon(Icons.settings_backup_restore),title:Text('بازیابی فایل پشتیبان')))]),IconButton(tooltip:'مدیریت تم‌ها',onPressed:manageThemes,icon:const Icon(Icons.palette_outlined))]),
+      appBar:AppBar(title:_selectionMode ? Text('${_selectedNoteIds.length} یادداشت انتخاب‌شده',style:const TextStyle(fontWeight:FontWeight.bold)) : null,leading:_selectionMode?IconButton(tooltip:'لغو انتخاب',onPressed:_clearSelection,icon:const Icon(Icons.close)):null,actions:_selectionMode?[IconButton(tooltip:'انتخاب همه',onPressed:_selectAllVisibleNotes,icon:const Icon(Icons.select_all)),IconButton(tooltip:'تغییر تم گروهی',onPressed:_changeSelectedNotesTheme,icon:const Icon(Icons.palette_outlined)),IconButton(tooltip:'انتقال گروهی',onPressed:_moveSelectedNotes,icon:const Icon(Icons.drive_file_move_outline)),IconButton(tooltip:'خروجی گروهی DOCX',onPressed:_exportSelectedNotes,icon:const Icon(Icons.archive_outlined)),IconButton(tooltip:'حذف گروهی',onPressed:_deleteSelectedNotes,icon:const Icon(Icons.delete_outline,color:Colors.red))]:[PopupMenuButton<String>(tooltip:'گزینه‌های بیشتر',onSelected:(value){if(value=='theme_random')_applyThemeToAllNotes(randomize:true);if(value=='theme_choose')_applyThemeToAllNotes(randomize:false);if(value=='import')importDocx();if(value=='export')exportDocx(notes);if(value=='backup')createBackup();if(value=='restore')restoreBackup();},itemBuilder:(context)=>const [PopupMenuItem(value:'theme_random',child:ListTile(leading:Icon(Icons.shuffle_rounded),title:Text('تم تصادفی برای همه نوشته‌ها'))),PopupMenuItem(value:'theme_choose',child:ListTile(leading:Icon(Icons.palette_outlined),title:Text('انتخاب یک تم برای همه نوشته‌ها'))),PopupMenuDivider(),PopupMenuItem(value:'import',child:ListTile(leading:Icon(Icons.file_open),title:Text('ورود گروهی DOCX'))),PopupMenuItem(value:'export',child:ListTile(leading:Icon(Icons.file_download),title:Text('خروجی گروهی DOCX'))),PopupMenuDivider(),PopupMenuItem(value:'backup',child:ListTile(leading:Icon(Icons.backup_outlined),title:Text('ساخت فایل پشتیبان'))),PopupMenuItem(value:'restore',child:ListTile(leading:Icon(Icons.settings_backup_restore),title:Text('بازیابی فایل پشتیبان')))]),IconButton(tooltip:'مدیریت تم‌ها',onPressed:manageThemes,icon:const Icon(Icons.palette_outlined))]),
       floatingActionButton:FloatingActionButton.extended(onPressed:()=>edit(),icon:const Icon(Icons.edit_note_rounded),label:const Text('یادداشت جدید')),
       body:SafeArea(child:Column(children:[
         if(!loading && featuredNote != null)
@@ -1559,7 +1560,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
                             fontSize: 16,
                             height: 1.45,
                             color: foreground,
-                            fontFamily: featuredNote!.themeFontFamily,
+                            fontFamily: appInterfaceFontFamily.value,
                           ),
                         ),
                         const SizedBox(height: 3),
@@ -1582,7 +1583,28 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
             }),
           ),
         Padding(padding:const EdgeInsets.fromLTRB(20,8,20,18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          TextField(controller:search,decoration:InputDecoration(hintText:'جستجو در یادداشت‌ها...',filled:true,fillColor:Colors.white,border:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide.none))),
+          Row(children:[
+            IconButton(
+              tooltip:'جستجو',
+              onPressed:(){
+                final expandSearch = !isSearchExpanded;
+                setState(() => isSearchExpanded = expandSearch);
+                if (!expandSearch) search.clear();
+              },
+              icon:const Icon(Icons.search),
+            ),
+            if(isSearchExpanded)
+              Expanded(child:TextField(
+                controller:search,
+                autofocus:true,
+                decoration:InputDecoration(
+                  hintText:'جستجو',
+                  filled:true,
+                  fillColor:Colors.white,
+                  border:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide.none),
+                ),
+              )),
+          ]),
           const SizedBox(height:8),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -1640,11 +1662,11 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
             final matchingLines = query.isEmpty ? <String>[] : _matchingLines(n, query);
             final selected = _selectedNoteIds.contains(n.id);
             return Card(elevation:selected?2:0,color:selected?Theme.of(context).colorScheme.primaryContainer:Color(backgroundColor),child:InkWell(onLongPress:()=>_toggleNoteSelection(n),onTap:()=>_selectionMode?_toggleNoteSelection(n):edit(note: n, searchQuery: query.isEmpty ? null : query),child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-              Row(children:[if(_selectionMode)Checkbox(value:selected,onChanged:(_)=>_toggleNoteSelection(n)),if(pinnedNoteIds.contains(n.id))const Padding(padding:EdgeInsets.only(left:6),child:Icon(Icons.push_pin_rounded,size:17)),Expanded(child:Text(n.title.isEmpty?'بدون عنوان':n.title,style:TextStyle(fontWeight:FontWeight.bold,fontSize:16,color:Color(n.themeTextColor),fontFamily:n.themeFontFamily))),if(!_selectionMode)IconButton(tooltip:'گزینه‌های یادداشت',onPressed:()=>showNoteMenu(n),icon:const Icon(Icons.more_vert))]),
-              if(query.isNotEmpty && matchingLines.isNotEmpty) ...matchingLines.take(6).map((line)=>Padding(padding:const EdgeInsets.only(top:6),child:_searchHighlightedText(line,query,textColor:Color(n.themeTextColor),fontFamily:n.themeFontFamily))),
-              if(query.isNotEmpty && matchingLines.isEmpty && n.title.toLowerCase().contains(query.toLowerCase()))_searchHighlightedText('عنوان: ${n.title}',query,textColor:Color(n.themeTextColor),fontFamily:n.themeFontFamily),
-              if(query.isEmpty && _notePlainText(n.body).isNotEmpty)Text(_notePlainText(n.body),maxLines:3,overflow:TextOverflow.ellipsis,style:TextStyle(fontSize:16,color:Color(n.themeTextColor),fontFamily:n.themeFontFamily)),
-              if(n.images.isNotEmpty)Padding(padding:const EdgeInsets.only(top:8),child:Text('${n.images.length} تصویر پیوست شده',style:TextStyle(color:Color(n.themeTextColor).withValues(alpha: .7),fontSize:12,fontFamily:n.themeFontFamily))),
+              Row(children:[if(_selectionMode)Checkbox(value:selected,onChanged:(_)=>_toggleNoteSelection(n)),if(pinnedNoteIds.contains(n.id))const Padding(padding:EdgeInsets.only(left:6),child:Icon(Icons.push_pin_rounded,size:17)),Expanded(child:Text(n.title.isEmpty?'بدون عنوان':n.title,style:TextStyle(fontWeight:FontWeight.bold,fontSize:16,color:Color(n.themeTextColor),fontFamily:appInterfaceFontFamily.value))),if(!_selectionMode)IconButton(tooltip:'گزینه‌های یادداشت',onPressed:()=>showNoteMenu(n),icon:const Icon(Icons.more_vert))]),
+              if(query.isNotEmpty && matchingLines.isNotEmpty) ...matchingLines.take(6).map((line)=>Padding(padding:const EdgeInsets.only(top:6),child:_searchHighlightedText(line,query,textColor:Color(n.themeTextColor),fontFamily:appInterfaceFontFamily.value))),
+              if(query.isNotEmpty && matchingLines.isEmpty && n.title.toLowerCase().contains(query.toLowerCase()))_searchHighlightedText('عنوان: ${n.title}',query,textColor:Color(n.themeTextColor),fontFamily:appInterfaceFontFamily.value),
+              if(query.isEmpty && _notePlainText(n.body).isNotEmpty)Text(_notePlainText(n.body),maxLines:3,overflow:TextOverflow.ellipsis,style:TextStyle(fontSize:16,color:Color(n.themeTextColor),fontFamily:appInterfaceFontFamily.value)),
+              if(n.images.isNotEmpty)Padding(padding:const EdgeInsets.only(top:8),child:Text('${n.images.length} تصویر پیوست شده',style:TextStyle(color:Color(n.themeTextColor).withValues(alpha: .7),fontSize:12,fontFamily:appInterfaceFontFamily.value))),
               if(n.audios.isNotEmpty)Padding(
                 padding:const EdgeInsets.only(top:8),
                 child:Wrap(
@@ -1660,14 +1682,14 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
                           size:18,
                           color:Color(n.themeTextColor),
                         ),
-                        label:Text('پخش ویس ${audioIndex+1}',style:TextStyle(color:Color(n.themeTextColor),fontFamily:n.themeFontFamily)),
+                        label:Text('پخش ویس ${audioIndex+1}',style:TextStyle(color:Color(n.themeTextColor),fontFamily:appInterfaceFontFamily.value)),
                         onPressed:()=>playNoteAudio(n.audios[audioIndex]),
                         backgroundColor:Color(backgroundColor).withValues(alpha: .75),
                       ),
                   ],
                 ),
               ),
-              const SizedBox(height:8),Text(date(n.updated),style:TextStyle(fontSize:11,color:Color(n.themeTextColor).withValues(alpha: .65),fontFamily:n.themeFontFamily)),
+              const SizedBox(height:8),Text(date(n.updated),style:TextStyle(fontSize:11,color:Color(n.themeTextColor).withValues(alpha: .65),fontFamily:appInterfaceFontFamily.value)),
             ]))));
           })),
       ])),
@@ -1862,6 +1884,8 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
   List<int> _searchPositions = [];
   int _searchPositionIndex = 0;
   Note? _appendTarget;
+  double editorLineSpacing = 1.0;
+  double editorPageMargin = 14.0;
   late int themeColor, themeTextColor;
   late String themeFontFamily;
   String? folderId;
@@ -1936,6 +1960,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
       document: doc,
       selection: const TextSelection.collapsed(offset: 0),
     );
+    _loadGlobalEditorSettings();
     if (widget.note == null) {
       controller.formatSelection(quill.Attribute.fromKeyValue('size', '20'));
     }
@@ -2299,6 +2324,98 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     );
   }
 
+  Future<void> _loadGlobalEditorSettings() async {
+    final repository = NotebookRepository();
+    final values = await Future.wait<double>([
+      repository.loadEditorLineSpacing(),
+      repository.loadEditorPageMargin(),
+    ]);
+    if (!mounted) return;
+    setState(() {
+      editorLineSpacing = values[0].clamp(0.8, 2.0).toDouble();
+      editorPageMargin = values[1].clamp(0.0, 48.0).toDouble();
+    });
+    _applyGlobalLineSpacing();
+  }
+
+  void _applyGlobalLineSpacing() {
+    final documentLength = controller.document.length;
+    if (documentLength <= 1) return;
+    controller.formatText(
+      0,
+      documentLength,
+      quill.Attribute.fromKeyValue('line-height', editorLineSpacing),
+    );
+  }
+
+  Future<void> _showLineSpacingSettings() async {
+    var value = editorLineSpacing;
+    final selected = await showDialog<double>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, refreshDialog) => AlertDialog(
+          title: const Text('فاصله بین خطوط'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('ضریب فاصله: ${value.toStringAsFixed(2)}'),
+              Slider(
+                value: value,
+                min: 0.8,
+                max: 2.0,
+                divisions: 12,
+                label: value.toStringAsFixed(2),
+                onChanged: (next) => refreshDialog(() => value = next),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, value), child: const Text('اعمال')),
+          ],
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    setState(() => editorLineSpacing = selected);
+    _applyGlobalLineSpacing();
+    await NotebookRepository().saveEditorLineSpacing(selected);
+    _scheduleAutoSave();
+  }
+
+  Future<void> _showPageMarginSettings() async {
+    var value = editorPageMargin;
+    final selected = await showDialog<double>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, refreshDialog) => AlertDialog(
+          title: const Text('فاصله متن از حاشیه صفحه'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('فاصله از هر طرف: ${value.round()} پیکسل'),
+              Slider(
+                value: value,
+                min: 0,
+                max: 48,
+                divisions: 24,
+                label: '${value.round()}',
+                onChanged: (next) => refreshDialog(() => value = next),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, value), child: const Text('اعمال')),
+          ],
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    setState(() => editorPageMargin = selected);
+    await NotebookRepository().saveEditorPageMargin(selected);
+  }
+
   void _scheduleAutoSave() {
     _autoSaveTimer?.cancel();
     _autoSaveTimer = Timer(const Duration(milliseconds: 500), _persistDraft);
@@ -2377,7 +2494,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
             child: quill.QuillEditor.basic(
               controller: controller,
               config: quill.QuillEditorConfig(
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: EdgeInsets.all(editorPageMargin),
                 placeholder: 'متن یادداشتت را اینجا بنویس...',
                 embedBuilders: [
                   ...FlutterQuillEmbeds.editorBuilders(
@@ -2434,6 +2551,16 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
               multiRowsDisplay: false,
               embedButtons: const [],
               customButtons: [
+                quill.QuillToolbarCustomButtonOptions(
+                  icon: const Icon(Icons.format_line_spacing),
+                  tooltip: 'فاصله بین خطوط',
+                  onPressed: _showLineSpacingSettings,
+                ),
+                quill.QuillToolbarCustomButtonOptions(
+                  icon: const Icon(Icons.padding_outlined),
+                  tooltip: 'فاصله از حاشیه صفحه',
+                  onPressed: _showPageMarginSettings,
+                ),
                 quill.QuillToolbarCustomButtonOptions(
                   icon: const Icon(Icons.undo),
                   tooltip: 'واگرد',
