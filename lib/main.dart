@@ -1880,6 +1880,8 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
   List<int> _searchPositions = [];
   int _searchPositionIndex = 0;
   Note? _appendTarget;
+  double editorLineSpacing = 1.0;
+  double editorPageMargin = 14.0;
   late int themeColor, themeTextColor;
   late String themeFontFamily;
   String? folderId;
@@ -1954,6 +1956,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
       document: doc,
       selection: const TextSelection.collapsed(offset: 0),
     );
+    _loadGlobalEditorSettings();
     if (widget.note == null) {
       controller.formatSelection(quill.Attribute.fromKeyValue('size', '20'));
     }
@@ -2300,6 +2303,97 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     );
   }
 
+  Future<void> _loadGlobalEditorSettings() async {
+    final repository = NotebookRepository();
+    final values = await Future.wait<double>([
+      repository.loadEditorLineSpacing(),
+      repository.loadEditorPageMargin(),
+    ]);
+    if (!mounted) return;
+    setState(() {
+      editorLineSpacing = values[0].clamp(0.8, 2.0).toDouble();
+      editorPageMargin = values[1].clamp(0.0, 48.0).toDouble();
+    });
+    _applyGlobalLineSpacing();
+  }
+
+  void _applyGlobalLineSpacing() {
+    if (controller.document.length <= 1) return;
+    controller.formatText(
+      0,
+      controller.document.length - 1,
+      quill.Attribute.fromKeyValue('lineHeight', editorLineSpacing.toStringAsFixed(2)),
+    );
+  }
+
+  Future<void> _showLineSpacingSettings() async {
+    var value = editorLineSpacing;
+    final selected = await showDialog<double>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, refreshDialog) => AlertDialog(
+          title: const Text('فاصله بین خطوط'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('ضریب فاصله: ${value.toStringAsFixed(2)}'),
+              Slider(
+                value: value,
+                min: 0.8,
+                max: 2.0,
+                divisions: 12,
+                label: value.toStringAsFixed(2),
+                onChanged: (next) => refreshDialog(() => value = next),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, value), child: const Text('اعمال')),
+          ],
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    setState(() => editorLineSpacing = selected);
+    _applyGlobalLineSpacing();
+    await NotebookRepository().saveEditorLineSpacing(selected);
+    _scheduleAutoSave();
+  }
+
+  Future<void> _showPageMarginSettings() async {
+    var value = editorPageMargin;
+    final selected = await showDialog<double>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, refreshDialog) => AlertDialog(
+          title: const Text('فاصله متن از حاشیه صفحه'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('فاصله از هر طرف: ${value.round()} پیکسل'),
+              Slider(
+                value: value,
+                min: 0,
+                max: 48,
+                divisions: 24,
+                label: '${value.round()}',
+                onChanged: (next) => refreshDialog(() => value = next),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('انصراف')),
+            FilledButton(onPressed: () => Navigator.pop(dialogContext, value), child: const Text('اعمال')),
+          ],
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    setState(() => editorPageMargin = selected);
+    await NotebookRepository().saveEditorPageMargin(selected);
+  }
+
   void _scheduleAutoSave() {
     _autoSaveTimer?.cancel();
     _autoSaveTimer = Timer(const Duration(milliseconds: 500), _persistDraft);
@@ -2378,7 +2472,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
             child: quill.QuillEditor.basic(
               controller: controller,
               config: quill.QuillEditorConfig(
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: EdgeInsets.all(editorPageMargin),
                 placeholder: 'متن یادداشتت را اینجا بنویس...',
                 embedBuilders: FlutterQuillEmbeds.editorBuilders(
                   imageEmbedConfig: QuillEditorImageEmbedConfig(
@@ -2432,6 +2526,16 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
               multiRowsDisplay: false,
               embedButtons: const [],
               customButtons: [
+                quill.QuillToolbarCustomButtonOptions(
+                  icon: const Icon(Icons.format_line_spacing),
+                  tooltip: 'فاصله بین خطوط',
+                  onPressed: _showLineSpacingSettings,
+                ),
+                quill.QuillToolbarCustomButtonOptions(
+                  icon: const Icon(Icons.padding_outlined),
+                  tooltip: 'فاصله از حاشیه صفحه',
+                  onPressed: _showPageMarginSettings,
+                ),
                 quill.QuillToolbarCustomButtonOptions(
                   icon: const Icon(Icons.undo),
                   tooltip: 'واگرد',
