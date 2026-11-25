@@ -1587,10 +1587,9 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
             IconButton(
               tooltip:'جستجو',
               onPressed:(){
-                setState(() {
-                  isSearchExpanded=!isSearchExpanded;
-                  if (!isSearchExpanded) search.clear();
-                });
+                final expandSearch = !isSearchExpanded;
+                setState(() => isSearchExpanded = expandSearch);
+                if (!expandSearch) search.clear();
               },
               icon:const Icon(Icons.search),
             ),
