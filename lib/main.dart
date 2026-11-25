@@ -2068,6 +2068,23 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     );
   }
 
+  void insertHorizontalRule() {
+    final selection = controller.selection;
+    final index = selection.start.clamp(0, controller.document.length - 1).toInt();
+    final selectedLength = selection.end - selection.start;
+    final change = delta.Delta()
+      ..retain(index)
+      ..delete(selectedLength)
+      ..insert('\n')
+      ..insert({'horizontalRule': true})
+      ..insert('\n');
+    controller.document.compose(change, quill.ChangeSource.local);
+    controller.updateSelection(
+      TextSelection.collapsed(offset: index + 3),
+      quill.ChangeSource.local,
+    );
+  }
+
   Future<void> toggleRecording() async {
     if(isRecording){
       final path=await recorder.stop();
@@ -2362,14 +2379,17 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
               config: quill.QuillEditorConfig(
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 placeholder: 'متن یادداشتت را اینجا بنویس...',
-                embedBuilders: FlutterQuillEmbeds.editorBuilders(
-                  imageEmbedConfig: QuillEditorImageEmbedConfig(
-                    imageProviderBuilder: (context, imageUrl) {
-                      final local = File(imageUrl);
-                      return local.existsSync() ? FileImage(local) : null;
-                    },
+                embedBuilders: [
+                  ...FlutterQuillEmbeds.editorBuilders(
+                    imageEmbedConfig: QuillEditorImageEmbedConfig(
+                      imageProviderBuilder: (context, imageUrl) {
+                        final local = File(imageUrl);
+                        return local.existsSync() ? FileImage(local) : null;
+                      },
+                    ),
                   ),
-                ),
+                  const HorizontalRuleEmbedBuilder(),
+                ],
               ),
             ),
           ),
@@ -2440,6 +2460,11 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
                   onPressed: () => controller.formatSelection(quill.Attribute.fromKeyValue('align', 'left')),
                 ),
                 quill.QuillToolbarCustomButtonOptions(
+                  icon: const Icon(Icons.horizontal_rule),
+                  tooltip: 'درج خط افقی',
+                  onPressed: insertHorizontalRule,
+                ),
+                quill.QuillToolbarCustomButtonOptions(
                   icon: const Icon(Icons.palette_outlined),
                   tooltip: 'انتخاب تم',
                   onPressed: selectEditorTheme,
@@ -2501,6 +2526,28 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
 }
 
 
+
+class HorizontalRuleEmbedBuilder extends quill.EmbedBuilder {
+  const HorizontalRuleEmbedBuilder();
+
+  @override
+  String get key => 'horizontalRule';
+
+  @override
+  Widget build(BuildContext context, quill.EmbedContext embedContext) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Divider(
+        thickness: 1.2,
+        color: Theme.of(context).dividerColor,
+        height: 1.2,
+      ),
+    );
+  }
+
+  @override
+  String toPlainText(quill.Embed node) => '\n';
+}
 
 class Stroke{final List<Offset> points;final Color color;final double width;const Stroke(this.points,this.color,this.width);}
 class DrawingPage extends StatefulWidget{
