@@ -2465,7 +2465,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
           Center(child: Text('${_searchPositionIndex + 1} / ${_searchPositions.length}')),
           IconButton(tooltip: 'نتیجه بعدی', onPressed: _searchPositionIndex < _searchPositions.length - 1 ? () => _moveSearchOccurrence(1) : null, icon: const Icon(Icons.keyboard_arrow_down)),
         ],
-        TextButton.icon(onPressed: save, icon: const Icon(Icons.check), label: const Text('ذخیره')),
+        IconButton(onPressed: save, tooltip: 'ذخیره', icon: const Icon(Icons.save_rounded)),
       ]),
       backgroundColor: Color(themeColor),
       body: Column(children: [
