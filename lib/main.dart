@@ -2075,9 +2075,9 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     final change = delta.Delta()
       ..retain(index)
       ..delete(selectedLength)
-      ..insert('\\n')
+      ..insert('\n')
       ..insert({'horizontalRule': true})
-      ..insert('\\n');
+      ..insert('\n');
     controller.document.compose(change, quill.ChangeSource.local);
     controller.updateSelection(
       TextSelection.collapsed(offset: index + 3),
@@ -2546,7 +2546,7 @@ class HorizontalRuleEmbedBuilder extends quill.EmbedBuilder {
   }
 
   @override
-  String toPlainText(quill.Embed node) => '\\n';
+  String toPlainText(quill.Embed node) => '\n';
 }
 
 class Stroke{final List<Offset> points;final Color color;final double width;const Stroke(this.points,this.color,this.width);}
