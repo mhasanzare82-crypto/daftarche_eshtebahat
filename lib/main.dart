@@ -598,7 +598,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
   }
   Widget _searchHighlightedText(String text, String query, {required Color textColor, required String? fontFamily}) {
     final needle = query.trim();
-    if (needle.isEmpty) return Text(text, style: TextStyle(color: textColor, fontFamily: fontFamily));
+    if (needle.isEmpty) return Text(text, style: TextStyle(fontSize: 16, height: 1.45, color: textColor, fontFamily: fontFamily));
     final lowerText = text.toLowerCase();
     final lowerNeedle = needle.toLowerCase();
     final spans = <TextSpan>[];
@@ -611,7 +611,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       spans.add(TextSpan(text: text.substring(found, end), style: const TextStyle(color: Color(0xFF7A3E00), backgroundColor: Color(0xFFFFD54F), fontWeight: FontWeight.w900)));
       cursor = end;
     }
-    return RichText(text: TextSpan(style: TextStyle(color: textColor, fontFamily: fontFamily, fontWeight: FontWeight.w600), children: spans));
+    return RichText(text: TextSpan(style: TextStyle(fontSize: 16, height: 1.45, color: textColor, fontFamily: fontFamily, fontWeight: FontWeight.w600), children: spans));
   }
 
   Future<void> edit({Note? note, String? searchQuery}) async {
@@ -1665,7 +1665,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
               Row(children:[if(_selectionMode)Checkbox(value:selected,onChanged:(_)=>_toggleNoteSelection(n)),if(pinnedNoteIds.contains(n.id))const Padding(padding:EdgeInsets.only(left:6),child:Icon(Icons.push_pin_rounded,size:17)),Expanded(child:Text(n.title.isEmpty?'بدون عنوان':n.title,style:TextStyle(fontWeight:FontWeight.bold,fontSize:16,color:Color(n.themeTextColor),fontFamily:appInterfaceFontFamily.value))),if(!_selectionMode)IconButton(tooltip:'گزینه‌های یادداشت',onPressed:()=>showNoteMenu(n),icon:const Icon(Icons.more_vert))]),
               if(query.isNotEmpty && matchingLines.isNotEmpty) ...matchingLines.take(6).map((line)=>Padding(padding:const EdgeInsets.only(top:6),child:_searchHighlightedText(line,query,textColor:Color(n.themeTextColor),fontFamily:appInterfaceFontFamily.value))),
               if(query.isNotEmpty && matchingLines.isEmpty && n.title.toLowerCase().contains(query.toLowerCase()))_searchHighlightedText('عنوان: ${n.title}',query,textColor:Color(n.themeTextColor),fontFamily:appInterfaceFontFamily.value),
-              if(query.isEmpty && _notePlainText(n.body).isNotEmpty)Text(_notePlainText(n.body),maxLines:3,overflow:TextOverflow.ellipsis,style:TextStyle(fontSize:16,color:Color(n.themeTextColor),fontFamily:appInterfaceFontFamily.value)),
+              if(query.isEmpty && _notePlainText(n.body).isNotEmpty)Text(_notePlainText(n.body),maxLines:3,overflow:TextOverflow.ellipsis,style:TextStyle(fontSize:16,height:1.45,color:Color(n.themeTextColor),fontFamily:appInterfaceFontFamily.value)),
               if(n.images.isNotEmpty)Padding(padding:const EdgeInsets.only(top:8),child:Text('${n.images.length} تصویر پیوست شده',style:TextStyle(color:Color(n.themeTextColor).withValues(alpha: .7),fontSize:12,fontFamily:appInterfaceFontFamily.value))),
               if(n.audios.isNotEmpty)Padding(
                 padding:const EdgeInsets.only(top:8),
