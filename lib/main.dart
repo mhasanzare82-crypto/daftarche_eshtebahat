@@ -1683,7 +1683,33 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
               if(query.isNotEmpty && matchingLines.isNotEmpty) ...matchingLines.take(6).map((line)=>Padding(padding:const EdgeInsets.only(top:6),child:_searchHighlightedText(line,query,textColor:Color(n.themeTextColor),fontFamily:appInterfaceFontFamily.value))),
               if(query.isNotEmpty && matchingLines.isEmpty && n.title.toLowerCase().contains(query.toLowerCase()))_searchHighlightedText('عنوان: ${n.title}',query,textColor:Color(n.themeTextColor),fontFamily:appInterfaceFontFamily.value),
               if(query.isEmpty && _notePlainText(n.body).isNotEmpty)Text(_notePlainText(n.body),maxLines:fullCardPreview?null:3,overflow:fullCardPreview?TextOverflow.visible:TextOverflow.ellipsis,style:TextStyle(fontSize:16,height:1.45,color:Color(n.themeTextColor),fontFamily:appInterfaceFontFamily.value)),
-               if(query.isEmpty && fullCardPreview && n.images.isNotEmpty)Padding(padding:const EdgeInsets.only(top:8),child:Wrap(spacing:8,runSpacing:8,children:n.images.map((path)=>ClipRRect(borderRadius:BorderRadius.circular(10),child:Image.file(File(path),width:112,height:112,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox(width:112,height:112,child:Center(child:Icon(Icons.broken_image_outlined))))).toList())),
+              if (query.isEmpty && fullCardPreview && n.images.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: n.images.map<Widget>((path) {
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.file(
+                          File(path),
+                          width: 112,
+                          height: 112,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const SizedBox(
+                            width: 112,
+                            height: 112,
+                            child: Center(
+                              child: Icon(Icons.broken_image_outlined),
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
               if(n.images.isNotEmpty)Padding(padding:const EdgeInsets.only(top:8),child:Text('${n.images.length} تصویر پیوست شده',style:TextStyle(color:Color(n.themeTextColor).withValues(alpha: .7),fontSize:12,fontFamily:appInterfaceFontFamily.value))),
               if(n.audios.isNotEmpty)Padding(
                 padding:const EdgeInsets.only(top:8),
