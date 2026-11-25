@@ -115,7 +115,7 @@ class _ThemeManagerDialogState extends State<ThemeManagerDialog> {
             const SizedBox(height: 8),
             Wrap(spacing: 7, runSpacing: 7, children: fonts.map((family) => Chip(
               avatar: const Icon(Icons.text_fields, size: 16),
-              label: Text(family, style: TextStyle(fontFamily: family, fontSize: 11)),
+              label: Text('متن نمونه', style: TextStyle(fontFamily: family, fontSize: 13)),
             )).toList()),
             const SizedBox(height: 12),
             const Divider(),
