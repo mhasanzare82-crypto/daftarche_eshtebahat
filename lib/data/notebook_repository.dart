@@ -97,6 +97,33 @@ class NotebookRepository {
     }
   }
 
+  static const _editorLineSpacingKey = 'notebook_editor_line_spacing';
+  static const _editorPageMarginKey = 'notebook_editor_page_margin';
+
+  Future<double> loadEditorLineSpacing() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble(_editorLineSpacingKey) ?? 1.0;
+  }
+
+  Future<void> saveEditorLineSpacing(double value) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!await prefs.setDouble(_editorLineSpacingKey, value)) {
+      throw StateError('Unable to persist editor line spacing');
+    }
+  }
+
+  Future<double> loadEditorPageMargin() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble(_editorPageMarginKey) ?? 14.0;
+  }
+
+  Future<void> saveEditorPageMargin(double value) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!await prefs.setDouble(_editorPageMarginKey, value)) {
+      throw StateError('Unable to persist editor page margin');
+    }
+  }
+
   Future<List<String>> loadRandomThemeNames() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getStringList(_randomThemesKey) ?? <String>[];
