@@ -1560,7 +1560,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
                             fontSize: 16,
                             height: 1.45,
                             color: foreground,
-                            fontFamily: featuredNote!.themeFontFamily,
+                            fontFamily: appInterfaceFontFamily.value,
                           ),
                         ),
                         const SizedBox(height: 3),
@@ -1658,11 +1658,11 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
             final matchingLines = query.isEmpty ? <String>[] : _matchingLines(n, query);
             final selected = _selectedNoteIds.contains(n.id);
             return Card(elevation:selected?2:0,color:selected?Theme.of(context).colorScheme.primaryContainer:Color(backgroundColor),child:InkWell(onLongPress:()=>_toggleNoteSelection(n),onTap:()=>_selectionMode?_toggleNoteSelection(n):edit(note: n, searchQuery: query.isEmpty ? null : query),child:Padding(padding:const EdgeInsets.all(14),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-              Row(children:[if(_selectionMode)Checkbox(value:selected,onChanged:(_)=>_toggleNoteSelection(n)),if(pinnedNoteIds.contains(n.id))const Padding(padding:EdgeInsets.only(left:6),child:Icon(Icons.push_pin_rounded,size:17)),Expanded(child:Text(n.title.isEmpty?'بدون عنوان':n.title,style:TextStyle(fontWeight:FontWeight.bold,fontSize:16,color:Color(n.themeTextColor),fontFamily:n.themeFontFamily))),if(!_selectionMode)IconButton(tooltip:'گزینه‌های یادداشت',onPressed:()=>showNoteMenu(n),icon:const Icon(Icons.more_vert))]),
-              if(query.isNotEmpty && matchingLines.isNotEmpty) ...matchingLines.take(6).map((line)=>Padding(padding:const EdgeInsets.only(top:6),child:_searchHighlightedText(line,query,textColor:Color(n.themeTextColor),fontFamily:n.themeFontFamily))),
-              if(query.isNotEmpty && matchingLines.isEmpty && n.title.toLowerCase().contains(query.toLowerCase()))_searchHighlightedText('عنوان: ${n.title}',query,textColor:Color(n.themeTextColor),fontFamily:n.themeFontFamily),
-              if(query.isEmpty && _notePlainText(n.body).isNotEmpty)Text(_notePlainText(n.body),maxLines:3,overflow:TextOverflow.ellipsis,style:TextStyle(color:Color(n.themeTextColor),fontFamily:n.themeFontFamily)),
-              if(n.images.isNotEmpty)Padding(padding:const EdgeInsets.only(top:8),child:Text('${n.images.length} تصویر پیوست شده',style:TextStyle(color:Color(n.themeTextColor).withValues(alpha: .7),fontSize:12,fontFamily:n.themeFontFamily))),
+              Row(children:[if(_selectionMode)Checkbox(value:selected,onChanged:(_)=>_toggleNoteSelection(n)),if(pinnedNoteIds.contains(n.id))const Padding(padding:EdgeInsets.only(left:6),child:Icon(Icons.push_pin_rounded,size:17)),Expanded(child:Text(n.title.isEmpty?'بدون عنوان':n.title,style:TextStyle(fontWeight:FontWeight.bold,fontSize:16,color:Color(n.themeTextColor),fontFamily:appInterfaceFontFamily.value))),if(!_selectionMode)IconButton(tooltip:'گزینه‌های یادداشت',onPressed:()=>showNoteMenu(n),icon:const Icon(Icons.more_vert))]),
+              if(query.isNotEmpty && matchingLines.isNotEmpty) ...matchingLines.take(6).map((line)=>Padding(padding:const EdgeInsets.only(top:6),child:_searchHighlightedText(line,query,textColor:Color(n.themeTextColor),fontFamily:appInterfaceFontFamily.value))),
+              if(query.isNotEmpty && matchingLines.isEmpty && n.title.toLowerCase().contains(query.toLowerCase()))_searchHighlightedText('عنوان: ${n.title}',query,textColor:Color(n.themeTextColor),fontFamily:appInterfaceFontFamily.value),
+              if(query.isEmpty && _notePlainText(n.body).isNotEmpty)Text(_notePlainText(n.body),maxLines:3,overflow:TextOverflow.ellipsis,style:TextStyle(color:Color(n.themeTextColor),fontFamily:appInterfaceFontFamily.value)),
+              if(n.images.isNotEmpty)Padding(padding:const EdgeInsets.only(top:8),child:Text('${n.images.length} تصویر پیوست شده',style:TextStyle(color:Color(n.themeTextColor).withValues(alpha: .7),fontSize:12,fontFamily:appInterfaceFontFamily.value))),
               if(n.audios.isNotEmpty)Padding(
                 padding:const EdgeInsets.only(top:8),
                 child:Wrap(
@@ -1678,14 +1678,14 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
                           size:18,
                           color:Color(n.themeTextColor),
                         ),
-                        label:Text('پخش ویس ${audioIndex+1}',style:TextStyle(color:Color(n.themeTextColor),fontFamily:n.themeFontFamily)),
+                        label:Text('پخش ویس ${audioIndex+1}',style:TextStyle(color:Color(n.themeTextColor),fontFamily:appInterfaceFontFamily.value)),
                         onPressed:()=>playNoteAudio(n.audios[audioIndex]),
                         backgroundColor:Color(backgroundColor).withValues(alpha: .75),
                       ),
                   ],
                 ),
               ),
-              const SizedBox(height:8),Text(date(n.updated),style:TextStyle(fontSize:11,color:Color(n.themeTextColor).withValues(alpha: .65),fontFamily:n.themeFontFamily)),
+              const SizedBox(height:8),Text(date(n.updated),style:TextStyle(fontSize:11,color:Color(n.themeTextColor).withValues(alpha: .65),fontFamily:appInterfaceFontFamily.value)),
             ]))));
           })),
       ])),
