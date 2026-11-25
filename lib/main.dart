@@ -2459,7 +2459,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
   Widget build(BuildContext context) => Directionality(
     textDirection: TextDirection.rtl,
     child: Scaffold(
-      appBar: AppBar(title: const Text('یادداشت'), actions: [
+      appBar: AppBar(actions: [
         if (widget.searchQuery != null && _searchPositions.isNotEmpty) ...[
           IconButton(tooltip: 'نتیجه قبلی', onPressed: _searchPositionIndex > 0 ? () => _moveSearchOccurrence(-1) : null, icon: const Icon(Icons.keyboard_arrow_up)),
           Center(child: Text('${_searchPositionIndex + 1} / ${_searchPositions.length}')),
