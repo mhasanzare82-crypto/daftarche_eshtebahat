@@ -186,6 +186,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
   List<Note> get _selectedNotes => filtered.where((note) => _selectedNoteIds.contains(note.id)).toList();
   final textColorPalette=<int>[];
   bool showPinnedOnly=false;
+  bool isSearchExpanded=false;
   final noteBackgroundColors=<String, int>{};
   static const defaultThemes=[NoteTheme('یاسی',0xFFEDE7F6),NoteTheme('آبی',0xFFE3F2FD),NoteTheme('سبز',0xFFE8F5E9),NoteTheme('صورتی',0xFFFCE4EC),NoteTheme('هلویی',0xFFFFEAD5)];
 
@@ -1582,7 +1583,24 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
             }),
           ),
         Padding(padding:const EdgeInsets.fromLTRB(20,8,20,18),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-          TextField(controller:search,decoration:InputDecoration(hintText:'جستجو در یادداشت‌ها...',filled:true,fillColor:Colors.white,border:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide.none))),
+          Row(children:[
+            IconButton(
+              tooltip:'جستجو',
+              onPressed:()=>setState(()=>isSearchExpanded=!isSearchExpanded),
+              icon:const Icon(Icons.search),
+            ),
+            if(isSearchExpanded)
+              Expanded(child:TextField(
+                controller:search,
+                autofocus:true,
+                decoration:InputDecoration(
+                  hintText:'جستجو',
+                  filled:true,
+                  fillColor:Colors.white,
+                  border:OutlineInputBorder(borderRadius:BorderRadius.circular(16),borderSide:BorderSide.none),
+                ),
+              )),
+          ]),
           const SizedBox(height:8),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
