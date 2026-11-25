@@ -186,6 +186,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
   List<Note> get _selectedNotes => filtered.where((note) => _selectedNoteIds.contains(note.id)).toList();
   final textColorPalette=<int>[];
   bool showPinnedOnly=false;
+  bool fullCardPreview = false;
   bool isSearchExpanded=false;
   final noteBackgroundColors=<String, int>{};
   static const defaultThemes=[NoteTheme('یاسی',0xFFEDE7F6),NoteTheme('آبی',0xFFE3F2FD),NoteTheme('سبز',0xFFE8F5E9),NoteTheme('صورتی',0xFFFCE4EC),NoteTheme('هلویی',0xFFFFEAD5)];
@@ -246,6 +247,20 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
     );
   }
 
+  Future<void> _setFullCardPreview(bool value) async {
+    if (fullCardPreview == value) return;
+    setState(() => fullCardPreview = value);
+    try {
+      await repository.saveFullCardPreview(value);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => fullCardPreview = !value);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('ذخیره تنظیم نمایش کارت ناموفق بود: $error')),
+      );
+    }
+  }
+
   void _refreshFeaturedNote() {
     if (!mounted || loading) return;
     setState(() => featuredNote = _randomNote(notes, excludeId: featuredNote?.id));
@@ -262,6 +277,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       final loadedTextColorPalette = await repository.loadTextColorPalette();
       final loadedAppFontFamily = await repository.loadAppInterfaceFontFamily();
       final loadedAppTheme = await repository.loadAppTheme();
+      final loadedFullCardPreview = await repository.loadFullCardPreview();
       notes.addAll(loadedNotes);
       featuredNote = _randomNote(loadedNotes);
       themes.addAll(loadedThemes);
@@ -270,6 +286,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       randomThemeNames.addAll(loadedRandomThemeNames);
       pinnedNoteIds.addAll(loadedPinnedNoteIds);
       pinnedFolderIds.addAll(loadedPinnedFolderIds);
+      fullCardPreview = loadedFullCardPreview;
       textColorPalette.addAll(loadedTextColorPalette);
       for (final entry in customFonts.entries) {
         try {
@@ -1499,7 +1516,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       return pinOrder!=0?pinOrder:a.name.compareTo(b.name);
     });
     return Directionality(textDirection:TextDirection.rtl,child:Scaffold(
-      appBar:AppBar(title:_selectionMode ? Text('${_selectedNoteIds.length} یادداشت انتخاب‌شده',style:const TextStyle(fontWeight:FontWeight.bold)) : null,leading:_selectionMode?IconButton(tooltip:'لغو انتخاب',onPressed:_clearSelection,icon:const Icon(Icons.close)):null,actions:_selectionMode?[IconButton(tooltip:'انتخاب همه',onPressed:_selectAllVisibleNotes,icon:const Icon(Icons.select_all)),IconButton(tooltip:'تغییر تم گروهی',onPressed:_changeSelectedNotesTheme,icon:const Icon(Icons.palette_outlined)),IconButton(tooltip:'انتقال گروهی',onPressed:_moveSelectedNotes,icon:const Icon(Icons.drive_file_move_outline)),IconButton(tooltip:'خروجی گروهی DOCX',onPressed:_exportSelectedNotes,icon:const Icon(Icons.archive_outlined)),IconButton(tooltip:'حذف گروهی',onPressed:_deleteSelectedNotes,icon:const Icon(Icons.delete_outline,color:Colors.red))]:[PopupMenuButton<String>(tooltip:'گزینه‌های بیشتر',onSelected:(value){if(value=='theme_random')_applyThemeToAllNotes(randomize:true);if(value=='theme_choose')_applyThemeToAllNotes(randomize:false);if(value=='import')importDocx();if(value=='export')exportDocx(notes);if(value=='backup')createBackup();if(value=='restore')restoreBackup();},itemBuilder:(context)=>const [PopupMenuItem(value:'theme_random',child:ListTile(leading:Icon(Icons.shuffle_rounded),title:Text('تم تصادفی برای همه نوشته‌ها'))),PopupMenuItem(value:'theme_choose',child:ListTile(leading:Icon(Icons.palette_outlined),title:Text('انتخاب یک تم برای همه نوشته‌ها'))),PopupMenuDivider(),PopupMenuItem(value:'import',child:ListTile(leading:Icon(Icons.file_open),title:Text('ورود گروهی DOCX'))),PopupMenuItem(value:'export',child:ListTile(leading:Icon(Icons.file_download),title:Text('خروجی گروهی DOCX'))),PopupMenuDivider(),PopupMenuItem(value:'backup',child:ListTile(leading:Icon(Icons.backup_outlined),title:Text('ساخت فایل پشتیبان'))),PopupMenuItem(value:'restore',child:ListTile(leading:Icon(Icons.settings_backup_restore),title:Text('بازیابی فایل پشتیبان')))]),IconButton(tooltip:'مدیریت تم‌ها',onPressed:manageThemes,icon:const Icon(Icons.palette_outlined))]),
+      appBar:AppBar(title:_selectionMode ? Text('${_selectedNoteIds.length} یادداشت انتخاب‌شده',style:const TextStyle(fontWeight:FontWeight.bold)) : null,leading:_selectionMode?IconButton(tooltip:'لغو انتخاب',onPressed:_clearSelection,icon:const Icon(Icons.close)):null,actions:_selectionMode?[IconButton(tooltip:'انتخاب همه',onPressed:_selectAllVisibleNotes,icon:const Icon(Icons.select_all)),IconButton(tooltip:'تغییر تم گروهی',onPressed:_changeSelectedNotesTheme,icon:const Icon(Icons.palette_outlined)),IconButton(tooltip:'انتقال گروهی',onPressed:_moveSelectedNotes,icon:const Icon(Icons.drive_file_move_outline)),IconButton(tooltip:'خروجی گروهی DOCX',onPressed:_exportSelectedNotes,icon:const Icon(Icons.archive_outlined)),IconButton(tooltip:'حذف گروهی',onPressed:_deleteSelectedNotes,icon:const Icon(Icons.delete_outline,color:Colors.red))]:[PopupMenuButton<String>(tooltip:'گزینه‌های بیشتر',onSelected:(value){if(value=='theme_random')_applyThemeToAllNotes(randomize:true);if(value=='theme_choose')_applyThemeToAllNotes(randomize:false);if(value=='import')importDocx();if(value=='export')exportDocx(notes);if(value=='backup')createBackup();if(value=='restore')restoreBackup();if(value=='preview_full')_setFullCardPreview(true);if(value=='preview_summary')_setFullCardPreview(false);},itemBuilder:(context)=>const [PopupMenuItem(value:'preview_full',child:ListTile(leading:Icon(Icons.view_agenda_outlined),title:Text('نمایش کامل کارت'))),PopupMenuItem(value:'preview_summary',child:ListTile(leading:Icon(Icons.view_stream_outlined),title:Text('نمایش خلاصه کارت'))),PopupMenuDivider(),PopupMenuItem(value:'theme_random',child:ListTile(leading:Icon(Icons.shuffle_rounded),title:Text('تم تصادفی برای همه نوشته‌ها'))),PopupMenuItem(value:'theme_choose',child:ListTile(leading:Icon(Icons.palette_outlined),title:Text('انتخاب یک تم برای همه نوشته‌ها'))),PopupMenuDivider(),PopupMenuItem(value:'import',child:ListTile(leading:Icon(Icons.file_open),title:Text('ورود گروهی DOCX'))),PopupMenuItem(value:'export',child:ListTile(leading:Icon(Icons.file_download),title:Text('خروجی گروهی DOCX'))),PopupMenuDivider(),PopupMenuItem(value:'backup',child:ListTile(leading:Icon(Icons.backup_outlined),title:Text('ساخت فایل پشتیبان'))),PopupMenuItem(value:'restore',child:ListTile(leading:Icon(Icons.settings_backup_restore),title:Text('بازیابی فایل پشتیبان')))]),IconButton(tooltip:'مدیریت تم‌ها',onPressed:manageThemes,icon:const Icon(Icons.palette_outlined))]),
       floatingActionButton:FloatingActionButton(onPressed:()=>edit(),tooltip:'یادداشت جدید',child:const Icon(Icons.add_rounded,size:32)),
       body:SafeArea(child:Column(children:[
         if(!loading && featuredNote != null)
@@ -1665,7 +1682,8 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
               Row(children:[if(_selectionMode)Checkbox(value:selected,onChanged:(_)=>_toggleNoteSelection(n)),if(pinnedNoteIds.contains(n.id))const Padding(padding:EdgeInsets.only(left:6),child:Icon(Icons.push_pin_rounded,size:17)),Expanded(child:Text(n.title.isEmpty?'بدون عنوان':n.title,style:TextStyle(fontWeight:FontWeight.bold,fontSize:16,color:Color(n.themeTextColor),fontFamily:appInterfaceFontFamily.value))),if(!_selectionMode)IconButton(tooltip:'گزینه‌های یادداشت',onPressed:()=>showNoteMenu(n),icon:const Icon(Icons.more_vert))]),
               if(query.isNotEmpty && matchingLines.isNotEmpty) ...matchingLines.take(6).map((line)=>Padding(padding:const EdgeInsets.only(top:6),child:_searchHighlightedText(line,query,textColor:Color(n.themeTextColor),fontFamily:appInterfaceFontFamily.value))),
               if(query.isNotEmpty && matchingLines.isEmpty && n.title.toLowerCase().contains(query.toLowerCase()))_searchHighlightedText('عنوان: ${n.title}',query,textColor:Color(n.themeTextColor),fontFamily:appInterfaceFontFamily.value),
-              if(query.isEmpty && _notePlainText(n.body).isNotEmpty)Text(_notePlainText(n.body),maxLines:3,overflow:TextOverflow.ellipsis,style:TextStyle(fontSize:16,height:1.45,color:Color(n.themeTextColor),fontFamily:appInterfaceFontFamily.value)),
+              if(query.isEmpty && _notePlainText(n.body).isNotEmpty)Text(_notePlainText(n.body),maxLines:fullCardPreview?null:3,overflow:fullCardPreview?TextOverflow.visible:TextOverflow.ellipsis,style:TextStyle(fontSize:16,height:1.45,color:Color(n.themeTextColor),fontFamily:appInterfaceFontFamily.value)),
+               if(query.isEmpty && fullCardPreview && n.images.isNotEmpty)Padding(padding:const EdgeInsets.only(top:8),child:Wrap(spacing:8,runSpacing:8,children:n.images.map((path)=>ClipRRect(borderRadius:BorderRadius.circular(10),child:Image.file(File(path),width:112,height:112,fit:BoxFit.cover,errorBuilder:(_,__,___)=>const SizedBox(width:112,height:112,child:Center(child:Icon(Icons.broken_image_outlined))))).toList())),
               if(n.images.isNotEmpty)Padding(padding:const EdgeInsets.only(top:8),child:Text('${n.images.length} تصویر پیوست شده',style:TextStyle(color:Color(n.themeTextColor).withValues(alpha: .7),fontSize:12,fontFamily:appInterfaceFontFamily.value))),
               if(n.audios.isNotEmpty)Padding(
                 padding:const EdgeInsets.only(top:8),
