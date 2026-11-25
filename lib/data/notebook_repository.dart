@@ -97,6 +97,20 @@ class NotebookRepository {
     }
   }
 
+  static const _fullCardPreviewKey = 'notebook_full_card_preview';
+
+  Future<bool> loadFullCardPreview() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_fullCardPreviewKey) ?? false;
+  }
+
+  Future<void> saveFullCardPreview(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!await prefs.setBool(_fullCardPreviewKey, value)) {
+      throw StateError('Unable to persist full card preview setting');
+    }
+  }
+
   static const _editorLineSpacingKey = 'notebook_editor_line_spacing';
   static const _editorPageMarginKey = 'notebook_editor_page_margin';
 
