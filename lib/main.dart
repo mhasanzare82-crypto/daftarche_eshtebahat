@@ -2702,7 +2702,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
         reverse: true,
         padding: const EdgeInsets.symmetric(horizontal: 4),
         itemCount: tools.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 2),
+        separatorBuilder: (_, _) => const SizedBox(width: 2),
         itemBuilder: (context, index) => _buildDraggableToolbarTool(tools[index]),
       ),
     );
