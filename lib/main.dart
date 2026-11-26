@@ -1498,7 +1498,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
           title: const Text('وارد کردن فایل Word'),
           onTap: () { Navigator.pop(sheetContext); importDocx(); }),
         ListTile(
-          leading: const Icon(Icons.palette_outlined),
+          leading: const Icon(Icons.palette_rounded),
           title: const Text('تغییر تم'),
           onTap: () { Navigator.pop(sheetContext); changeNoteTheme(note); },
         ),
@@ -2532,27 +2532,27 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
   Widget _buildToolbarControl(String tool) {
     final customOptions = <String, quill.QuillToolbarCustomButtonOptions>{
       'pageMargin': quill.QuillToolbarCustomButtonOptions(
-        icon: const Icon(Icons.padding_outlined, color: Colors.black),
+        icon: const Icon(Icons.padding_rounded, color: Colors.black),
         tooltip: 'فاصله از حاشیه صفحه',
         onPressed: _showPageMarginSettings,
       ),
       'alignRight': quill.QuillToolbarCustomButtonOptions(
-        icon: const Icon(Icons.format_align_right, color: Colors.black),
+        icon: const Icon(Icons.format_align_right_rounded, color: Colors.black),
         tooltip: 'راست‌چین',
         onPressed: () => controller.formatSelection(quill.Attribute.fromKeyValue('align', 'right')),
       ),
       'alignCenter': quill.QuillToolbarCustomButtonOptions(
-        icon: const Icon(Icons.format_align_center, color: Colors.black),
+        icon: const Icon(Icons.format_align_center_rounded, color: Colors.black),
         tooltip: 'وسط‌چین',
         onPressed: () => controller.formatSelection(quill.Attribute.fromKeyValue('align', 'center')),
       ),
       'alignLeft': quill.QuillToolbarCustomButtonOptions(
-        icon: const Icon(Icons.format_align_left, color: Colors.black),
+        icon: const Icon(Icons.format_align_left_rounded, color: Colors.black),
         tooltip: 'چپ‌چین',
         onPressed: () => controller.formatSelection(quill.Attribute.fromKeyValue('align', 'left')),
       ),
       'horizontalRule': quill.QuillToolbarCustomButtonOptions(
-        icon: const Icon(Icons.horizontal_rule, color: Colors.black),
+        icon: const Icon(Icons.horizontal_rule_rounded, color: Colors.black),
         tooltip: 'درج خط افقی',
         onPressed: insertHorizontalRule,
       ),
@@ -2562,7 +2562,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
         onPressed: selectEditorTheme,
       ),
       'audio': quill.QuillToolbarCustomButtonOptions(
-        icon: Icon(isRecording ? Icons.stop_circle_outlined : Icons.mic_none, color: Colors.black),
+        icon: Icon(isRecording ? Icons.stop_circle_rounded : Icons.mic_rounded, color: Colors.black),
         tooltip: isRecording ? 'پایان ضبط ویس' : 'اضافه کردن ویس',
         onPressed: toggleRecording,
       ),
@@ -2617,7 +2617,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
       PopupMenuButton<String>(
         tooltip: 'اندازه فونت',
         color: Color(themeColor),
-        icon: const Icon(Icons.format_size, color: Colors.black),
+        icon: const Icon(Icons.format_size_rounded, color: Colors.black),
         onSelected: (size) {
           controller.formatSelection(quill.Attribute.fromKeyValue('size', size));
         },
@@ -2635,7 +2635,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
       PopupMenuButton<String>(
         tooltip: 'نوع فونت',
         color: Color(themeColor),
-        icon: const Icon(Icons.font_download_outlined, color: Colors.black),
+        icon: const Icon(Icons.font_download_rounded, color: Colors.black),
         onSelected: (family) {
           controller.formatSelection(quill.Attribute.fromKeyValue('font', family));
         },
@@ -2652,7 +2652,37 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
       IconButton(
         tooltip: 'ارتفاع خطوط',
         onPressed: _showLineSpacingSettings,
-        icon: const Icon(Icons.format_line_spacing, color: Colors.black),
+        icon: const Icon(Icons.format_line_spacing_rounded, color: Colors.black),
+      ),
+    );
+  }
+
+  Widget _buildUndoButton() {
+    return _toolbarButtonSurface(
+      IconButton(
+        tooltip: 'بازگشت',
+        onPressed: controller.undo,
+        icon: const Icon(Icons.undo_rounded, color: Colors.black),
+      ),
+    );
+  }
+
+  Widget _buildRedoButton() {
+    return _toolbarButtonSurface(
+      IconButton(
+        tooltip: 'انجام دوباره',
+        onPressed: controller.redo,
+        icon: const Icon(Icons.redo_rounded, color: Colors.black),
+      ),
+    );
+  }
+
+  Widget _buildAddImageButton() {
+    return _toolbarButtonSurface(
+      IconButton(
+        tooltip: 'افزودن تصویر',
+        onPressed: addImage,
+        icon: const Icon(Icons.add_photo_alternate_rounded, color: Colors.black),
       ),
     );
   }
@@ -2667,112 +2697,43 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
       maximumSize: const WidgetStatePropertyAll(Size(48, 48)),
       padding: const WidgetStatePropertyAll(EdgeInsets.zero),
       shape: WidgetStatePropertyAll(
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
     final toolbarTheme = Theme.of(context).copyWith(
       iconTheme: const IconThemeData(color: Colors.black),
       iconButtonTheme: IconButtonThemeData(style: buttonStyle),
-      popupMenuTheme: PopupMenuThemeData(
-        color: toolbarBackground,
-      ),
+      popupMenuTheme: PopupMenuThemeData(color: toolbarBackground),
     );
+
     return Theme(
       data: toolbarTheme,
       child: Material(
         color: toolbarBackground,
         child: SizedBox(
           width: double.infinity,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                height: 48,
-                child: Row(
-                  children: [
-                    IconButton(
-                      tooltip: 'Undo',
-                      style: buttonStyle,
-                      onPressed: controller.undo,
-                      icon: const Icon(Icons.undo, color: Colors.black),
-                    ),
-                    IconButton(
-                      tooltip: 'Redo',
-                      style: buttonStyle,
-                      onPressed: controller.redo,
-                      icon: const Icon(Icons.redo, color: Colors.black),
-                    ),
-                    IconButton(
-                      tooltip: 'افزودن تصویر',
-                      style: buttonStyle,
-                      onPressed: addImage,
-                      icon: const Icon(Icons.add_photo_alternate_outlined, color: Colors.black),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1, thickness: 1, color: Colors.black26),
-              SizedBox(
-                height: 48,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  reverse: true,
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  child: Row(
-                    children: [
-                      _buildLineSpacingButton(),
-                      _buildFontSizeButton(),
-                      _buildFontFamilyButton(),
-                      for (final tool in defaultToolbarOrder)
-                        _buildToolbarControl(tool),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+          height: 48,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            reverse: true,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Row(
+              children: [
+                // The former first-row controls now lead the main toolbar.
+                _buildUndoButton(),
+                _buildRedoButton(),
+                _buildAddImageButton(),
+                _buildLineSpacingButton(),
+                _buildFontSizeButton(),
+                _buildFontFamilyButton(),
+                for (final tool in defaultToolbarOrder)
+                  _buildToolbarControl(tool),
+              ],
+            ),
           ),
         ),
       ),
     );
-  }
-
-  void _scheduleAutoSave() {
-    _autoSaveTimer?.cancel();
-    _autoSaveTimer = Timer(const Duration(milliseconds: 500), _persistDraft);
-  }
-
-  Future<void> _persistDraft() async {
-    _autoSaveTimer?.cancel();    final draft = _buildNote();
-    if (draft != null) await widget.onAutoSave(draft);
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
-      _persistDraft();
-    }
-  }
-
-  Future<void> save() async {
-    _autoSaveTimer?.cancel();
-    final note = _buildNote();
-    if (note == null) { Navigator.pop(context); return; }
-    await widget.onAutoSave(note);
-    if (mounted) Navigator.pop(context, note);
-  }
-
-  @override
-  void dispose() {
-    _autoSaveTimer?.cancel();
-    _persistDraft();
-    WidgetsBinding.instance.removeObserver(this);
-    title.removeListener(_scheduleAutoSave);
-    controller.removeListener(_scheduleAutoSave);
-    title.dispose();
-    recorder.dispose();
-    audioPlayer.dispose();
-    controller.dispose();
-    super.dispose();
   }
 
   @override
