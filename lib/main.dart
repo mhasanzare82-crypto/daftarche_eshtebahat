@@ -2665,6 +2665,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
         showSubscript: false,
         showSuperscript: false,
         ),
+        ),
       ),
     );
   }
