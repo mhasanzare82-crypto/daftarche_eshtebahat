@@ -2513,6 +2513,22 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     await NotebookRepository().saveEditorPageMargin(selected);
   }
 
+  Widget _toolbarButtonSurface(Widget child) {
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: Material(
+        color: Color(themeColor),
+        child: Center(
+          child: IconTheme.merge(
+            data: const IconThemeData(color: Colors.black),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildToolbarControl(String tool) {
     final customOptions = <String, quill.QuillToolbarCustomButtonOptions>{
       'pageMargin': quill.QuillToolbarCustomButtonOptions(
@@ -2546,119 +2562,119 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
         onPressed: selectEditorTheme,
       ),
       'audio': quill.QuillToolbarCustomButtonOptions(
-        icon: Icon(
-          isRecording ? Icons.stop_circle_outlined : Icons.mic_none,
-          color: Colors.black,
-        ),
+        icon: Icon(isRecording ? Icons.stop_circle_outlined : Icons.mic_none, color: Colors.black),
         tooltip: isRecording ? 'پایان ضبط ویس' : 'اضافه کردن ویس',
         onPressed: toggleRecording,
       ),
     };
-
     final custom = customOptions[tool];
-    return SizedBox(
-      width: 48,
-      height: 48,
-      child: Center(
-        child: IconTheme.merge(
-          data: const IconThemeData(color: Colors.black),
-          child: quill.QuillSimpleToolbar(
-            controller: controller,
-            config: quill.QuillSimpleToolbarConfig(
-              multiRowsDisplay: false,
-              embedButtons: const [],
-              customButtons: custom == null ? const [] : [custom],
-              showDividers: false,
-              showFontFamily: false,
-              showFontSize: false,
-              showBoldButton: false,
-              showItalicButton: false,
-              showSmallButton: false,
-              showUnderLineButton: false,
-              showLineHeightButton: false,
-              showStrikeThrough: false,
-              showInlineCode: false,
-              showColorButton: tool == 'color',
-              showBackgroundColorButton: tool == 'backgroundColor',
-              showClearFormat: false,
-              showAlignmentButtons: false,
-              showLeftAlignment: false,
-              showCenterAlignment: false,
-              showRightAlignment: false,
-              showJustifyAlignment: false,
-              showHeaderStyle: false,
-              showListNumbers: tool == 'listNumbers',
-              showListBullets: false,
-              showListCheck: false,
-              showCodeBlock: false,
-              showQuote: false,
-              showIndent: false,
-              showLink: false,
-              showUndo: false,
-              showRedo: false,
-              showDirection: false,
-              showSearchButton: false,
-              showSubscript: false,
-              showSuperscript: false,
-            ),
-          ),
+    return _toolbarButtonSurface(
+      quill.QuillSimpleToolbar(
+        controller: controller,
+        config: quill.QuillSimpleToolbarConfig(
+          multiRowsDisplay: false,
+          embedButtons: const [],
+          customButtons: custom == null ? const [] : [custom],
+          showDividers: false,
+          showFontFamily: false,
+          showFontSize: false,
+          showBoldButton: false,
+          showItalicButton: false,
+          showSmallButton: false,
+          showUnderLineButton: false,
+          showLineHeightButton: false,
+          showStrikeThrough: false,
+          showInlineCode: false,
+          showColorButton: tool == 'color',
+          showBackgroundColorButton: tool == 'backgroundColor',
+          showClearFormat: false,
+          showAlignmentButtons: false,
+          showLeftAlignment: false,
+          showCenterAlignment: false,
+          showRightAlignment: false,
+          showJustifyAlignment: false,
+          showHeaderStyle: false,
+          showListNumbers: tool == 'listNumbers',
+          showListBullets: false,
+          showListCheck: false,
+          showCodeBlock: false,
+          showQuote: false,
+          showIndent: false,
+          showLink: false,
+          showUndo: false,
+          showRedo: false,
+          showDirection: false,
+          showSearchButton: false,
+          showSubscript: false,
+          showSuperscript: false,
         ),
       ),
     );
   }
 
   Widget _buildFontSizeButton() {
-    return PopupMenuButton<String>(
-      tooltip: 'اندازه فونت',
-      icon: const Icon(Icons.format_size, color: Colors.black),
-      onSelected: (size) {
-        controller.formatSelection(quill.Attribute.fromKeyValue('size', size));
-      },
-      itemBuilder: (context) => [
-        for (var size = 6; size <= 42; size++)
-          PopupMenuItem<String>(
-            value: '$size',
-            child: Text('$size'),
-          ),
-      ],
+    return _toolbarButtonSurface(
+      PopupMenuButton<String>(
+        tooltip: 'اندازه فونت',
+        color: Color(themeColor),
+        icon: const Icon(Icons.format_size, color: Colors.black),
+        onSelected: (size) {
+          controller.formatSelection(quill.Attribute.fromKeyValue('size', size));
+        },
+        itemBuilder: (context) => [
+          for (var size = 6; size <= 42; size++)
+            PopupMenuItem<String>(value: '$size', child: Text('$size')),
+        ],
+      ),
     );
   }
 
   Widget _buildFontFamilyButton() {
     final families = toolbarFontFamilies.entries.toList();
-    return PopupMenuButton<String>(
-      tooltip: 'نوع فونت',
-      icon: const Icon(Icons.font_download_outlined, color: Colors.black),
-      onSelected: (family) {
-        controller.formatSelection(quill.Attribute.fromKeyValue('font', family));
-      },
-      itemBuilder: (context) => [
-        for (final family in families)
-          PopupMenuItem<String>(
-            value: family.value,
-            child: Text(family.key),
-          ),
-      ],
+    return _toolbarButtonSurface(
+      PopupMenuButton<String>(
+        tooltip: 'نوع فونت',
+        color: Color(themeColor),
+        icon: const Icon(Icons.font_download_outlined, color: Colors.black),
+        onSelected: (family) {
+          controller.formatSelection(quill.Attribute.fromKeyValue('font', family));
+        },
+        itemBuilder: (context) => [
+          for (final family in families)
+            PopupMenuItem<String>(value: family.value, child: Text(family.key)),
+        ],
+      ),
     );
   }
 
   Widget _buildLineSpacingButton() {
-    return IconButton(
-      tooltip: 'ارتفاع خطوط',
-      onPressed: _showLineSpacingSettings,
-      icon: const Icon(Icons.format_line_spacing, color: Colors.black),
+    return _toolbarButtonSurface(
+      IconButton(
+        tooltip: 'ارتفاع خطوط',
+        onPressed: _showLineSpacingSettings,
+        icon: const Icon(Icons.format_line_spacing, color: Colors.black),
+      ),
     );
   }
 
   Widget _buildEditorToolbar() {
     final toolbarBackground = Color(themeColor);
+    final buttonStyle = ButtonStyle(
+      backgroundColor: WidgetStatePropertyAll(toolbarBackground),
+      foregroundColor: const WidgetStatePropertyAll(Colors.black),
+      overlayColor: WidgetStatePropertyAll(Colors.black.withValues(alpha: 0.08)),
+      minimumSize: const WidgetStatePropertyAll(Size(48, 48)),
+      maximumSize: const WidgetStatePropertyAll(Size(48, 48)),
+      padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+      shape: WidgetStatePropertyAll(
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
     final toolbarTheme = Theme.of(context).copyWith(
-      iconButtonTheme: IconButtonThemeData(
-        style: ButtonStyle(
-          backgroundColor: WidgetStatePropertyAll(toolbarBackground),
-          foregroundColor: const WidgetStatePropertyAll(Colors.black),
-          overlayColor: WidgetStatePropertyAll(Colors.black.withValues(alpha: 0.08)),
-        ),
+      iconTheme: const IconThemeData(color: Colors.black),
+      iconButtonTheme: IconButtonThemeData(style: buttonStyle),
+      popupMenuTheme: PopupMenuThemeData(
+        color: toolbarBackground,
       ),
     );
     return Theme(
@@ -2675,17 +2691,20 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
                 child: Row(
                   children: [
                     IconButton(
-                      tooltip: 'واگرد',
-                      onPressed: () => controller.undo(),
+                      tooltip: 'Undo',
+                      style: buttonStyle,
+                      onPressed: controller.undo,
                       icon: const Icon(Icons.undo, color: Colors.black),
                     ),
                     IconButton(
-                      tooltip: 'انجام دوباره',
-                      onPressed: () => controller.redo(),
+                      tooltip: 'Redo',
+                      style: buttonStyle,
+                      onPressed: controller.redo,
                       icon: const Icon(Icons.redo, color: Colors.black),
                     ),
                     IconButton(
                       tooltip: 'افزودن تصویر',
+                      style: buttonStyle,
                       onPressed: addImage,
                       icon: const Icon(Icons.add_photo_alternate_outlined, color: Colors.black),
                     ),
