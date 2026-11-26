@@ -1529,24 +1529,28 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       floatingActionButton: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          FloatingActionButton(
-            heroTag: 'randomFeaturedNote',
-            constraints: const BoxConstraints.tightFor(width: 66, height: 66),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            foregroundColor: Theme.of(context).colorScheme.onPrimary,
-            onPressed: notes.isEmpty ? null : _refreshFeaturedNote,
-            tooltip: 'نمایش عنوان تصادفی بعدی',
-            child: const Icon(Icons.shuffle_rounded, size: 34),
+          Transform.scale(
+            scale: 1.12,
+            child: FloatingActionButton(
+              heroTag: 'randomFeaturedNote',
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              onPressed: notes.isEmpty ? null : _refreshFeaturedNote,
+              tooltip: 'نمایش عنوان تصادفی بعدی',
+              child: const Icon(Icons.shuffle_rounded, size: 34),
+            ),
           ),
           const SizedBox(width: 12),
-          FloatingActionButton(
-            heroTag: 'newNote',
-            constraints: const BoxConstraints.tightFor(width: 66, height: 66),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            foregroundColor: Theme.of(context).colorScheme.onPrimary,
-            onPressed: () => edit(),
-            tooltip: 'یادداشت جدید',
-            child: const Icon(Icons.add_rounded, size: 38),
+          Transform.scale(
+            scale: 1.12,
+            child: FloatingActionButton(
+              heroTag: 'newNote',
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              onPressed: () => edit(),
+              tooltip: 'یادداشت جدید',
+              child: const Icon(Icons.add_rounded, size: 38),
+            ),
           ),
         ],
       ),
