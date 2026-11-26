@@ -151,6 +151,20 @@ class NotebookRepository {
     }
   }
 
+  static const _editorToolbarOrderKey = 'notebook_editor_toolbar_order';
+
+  Future<List<String>> loadEditorToolbarOrder() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(_editorToolbarOrderKey) ?? <String>[];
+  }
+
+  Future<void> saveEditorToolbarOrder(List<String> values) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!await prefs.setStringList(_editorToolbarOrderKey, values)) {
+      throw StateError('Unable to persist editor toolbar order');
+    }
+  }
+
   Future<List<String>> loadRandomThemeNames() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getStringList(_randomThemesKey) ?? <String>[];
