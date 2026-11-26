@@ -2611,7 +2611,16 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     };
 
     final custom = customOptions[tool];
-    return quill.QuillSimpleToolbar(
+    final controlWidth = switch (tool) {
+      'fontFamily' => 176.0,
+      'fontSize' => 92.0,
+      _ => 48.0,
+    };
+    return SizedBox(
+      width: controlWidth,
+      height: 52,
+      child: Center(
+        child: quill.QuillSimpleToolbar(
       controller: controller,
       config: quill.QuillSimpleToolbarConfig(
         buttonOptions: quill.QuillSimpleToolbarButtonOptions(
@@ -2655,6 +2664,8 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
         showSearchButton: false,
         showSubscript: false,
         showSuperscript: false,
+        ),
+        ),
       ),
     );
   }
@@ -2781,7 +2792,9 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
               ),
             ]),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
+          _buildEditorToolbar(),
+          const Divider(height: 1),
           Expanded(
             child: quill.QuillEditor.basic(
               controller: controller,
@@ -2833,7 +2846,6 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
                 ],
               ),
             ),
-          _buildEditorToolbar(),
         ]),
       ),
   );
