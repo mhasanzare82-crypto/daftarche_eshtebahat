@@ -1970,9 +1970,6 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     'color', 'backgroundColor', 'listNumbers', 'pageMargin', 'alignRight',
     'alignCenter', 'alignLeft', 'horizontalRule', 'theme', 'audio',
   ];
-  List<String> _toolbarOrder = List<String>.of(defaultToolbarOrder);
-  bool _toolbarOrderLoaded = false;
-  String? _draggingToolbarTool;
   late int themeColor, themeTextColor;
   late String themeFontFamily;
   String? folderId;
@@ -2048,7 +2045,6 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
       selection: const TextSelection.collapsed(offset: 0),
     );
     _loadGlobalEditorSettings();
-    _loadToolbarOrder();
     if (widget.note == null) {
       controller.formatSelection(quill.Attribute.fromKeyValue('size', '20'));
     }
@@ -2517,36 +2513,6 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     await NotebookRepository().saveEditorPageMargin(selected);
   }
 
-  Future<void> _loadToolbarOrder() async {
-    final stored = await NotebookRepository().loadEditorToolbarOrder();
-    if (!mounted) return;
-    final valid = stored.where(defaultToolbarOrder.contains).toSet();
-    setState(() {
-      _toolbarOrder = [
-        ...stored.where(defaultToolbarOrder.contains),
-        ...defaultToolbarOrder.where((tool) => !valid.contains(tool)),
-      ];
-      _toolbarOrderLoaded = true;
-    });
-  }
-
-  Future<void> _moveToolbarTool(String draggedTool, String targetTool) async {
-    if (draggedTool == targetTool) return;
-    final next = List<String>.of(_toolbarOrder);
-    final from = next.indexOf(draggedTool);
-    var to = next.indexOf(targetTool);
-    if (from < 0 || to < 0) return;
-    next.removeAt(from);
-    if (from < to) to--;
-    next.insert(to, draggedTool);
-    setState(() => _toolbarOrder = next);
-    try {
-      await NotebookRepository().saveEditorToolbarOrder(next);
-    } catch (error) {
-      debugPrint('Editor toolbar order save failed: $error');
-    }
-  }
-
   Widget _buildToolbarControl(String tool) {
     final customOptions = <String, quill.QuillToolbarCustomButtonOptions>{
       'pageMargin': quill.QuillToolbarCustomButtonOptions(
@@ -2684,88 +2650,69 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildDraggableToolbarTool(String tool) {
-    final child = _buildToolbarControl(tool);
-    return DragTarget<String>(
-      onWillAcceptWithDetails: (details) => details.data != tool,
-      onAcceptWithDetails: (details) => _moveToolbarTool(details.data, tool),
-      builder: (context, candidates, rejected) => LongPressDraggable<String>(
-        data: tool,
-        delay: const Duration(seconds: 3),
-        onDragStarted: () => setState(() => _draggingToolbarTool = tool),
-        onDragEnd: (_) => setState(() => _draggingToolbarTool = null),
-        feedback: Material(
-          color: Colors.transparent,
-          child: Opacity(opacity: 0.92, child: _buildToolbarControl(tool)),
-        ),
-        childWhenDragging: Opacity(
-          opacity: 0.25,
-          child: _buildToolbarControl(tool),
-        ),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 120),
-          decoration: BoxDecoration(
-            color: candidates.isNotEmpty
-                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.14)
-                : (_draggingToolbarTool == tool
-                    ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.08)
-                    : Colors.transparent),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: child,
+  Widget _buildEditorToolbar() {
+    final toolbarBackground = Color(themeColor);
+    final toolbarTheme = Theme.of(context).copyWith(
+      iconButtonTheme: IconButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: WidgetStatePropertyAll(toolbarBackground),
+          foregroundColor: const WidgetStatePropertyAll(Colors.black),
+          overlayColor: WidgetStatePropertyAll(Colors.black.withValues(alpha: 0.08)),
         ),
       ),
     );
-  }
-
-  Widget _buildEditorToolbar() {
-    final tools = _toolbarOrderLoaded ? _toolbarOrder : defaultToolbarOrder;
-    return Container(
-      width: double.infinity,
-      color: Color(themeColor),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            height: 48,
-            child: Row(
-              children: [
-                IconButton(
-                  tooltip: 'واگرد',
-                  onPressed: () => controller.undo(),
-                  icon: const Icon(Icons.undo, color: Colors.black),
+    return Theme(
+      data: toolbarTheme,
+      child: Material(
+        color: toolbarBackground,
+        child: SizedBox(
+          width: double.infinity,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                height: 48,
+                child: Row(
+                  children: [
+                    IconButton(
+                      tooltip: 'واگرد',
+                      onPressed: () => controller.undo(),
+                      icon: const Icon(Icons.undo, color: Colors.black),
+                    ),
+                    IconButton(
+                      tooltip: 'انجام دوباره',
+                      onPressed: () => controller.redo(),
+                      icon: const Icon(Icons.redo, color: Colors.black),
+                    ),
+                    IconButton(
+                      tooltip: 'افزودن تصویر',
+                      onPressed: addImage,
+                      icon: const Icon(Icons.add_photo_alternate_outlined, color: Colors.black),
+                    ),
+                  ],
                 ),
-                IconButton(
-                  tooltip: 'انجام دوباره',
-                  onPressed: () => controller.redo(),
-                  icon: const Icon(Icons.redo, color: Colors.black),
-                ),
-                IconButton(
-                  tooltip: 'افزودن تصویر',
-                  onPressed: addImage,
-                  icon: const Icon(Icons.add_photo_alternate_outlined, color: Colors.black),
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1, thickness: 1, color: Colors.black26),
-          SizedBox(
-            height: 48,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              reverse: true,
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Row(
-                children: [
-                  _buildLineSpacingButton(),
-                  _buildFontSizeButton(),
-                  _buildFontFamilyButton(),
-                  for (final tool in tools) _buildDraggableToolbarTool(tool),
-                ],
               ),
-            ),
+              const Divider(height: 1, thickness: 1, color: Colors.black26),
+              SizedBox(
+                height: 48,
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  reverse: true,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Row(
+                    children: [
+                      _buildLineSpacingButton(),
+                      _buildFontSizeButton(),
+                      _buildFontFamilyButton(),
+                      for (final tool in defaultToolbarOrder)
+                        _buildToolbarControl(tool),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
