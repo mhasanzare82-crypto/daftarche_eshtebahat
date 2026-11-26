@@ -1969,7 +1969,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
   double editorPageMargin = 14.0;
   static const List<String> defaultToolbarOrder = [
     'color', 'backgroundColor', 'listNumbers', 'pageMargin', 'alignRight',
-    'alignCenter', 'alignLeft', 'horizontalRule', 'theme', 'audio',
+    'alignCenter', 'alignLeft', 'theme', 'audio',
   ];
   late int themeColor, themeTextColor;
   late String themeFontFamily;
@@ -2730,7 +2730,8 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
               dragStartBehavior: DragStartBehavior.down,
               padding: const EdgeInsets.symmetric(horizontal: 4),
               children: [
-              // The former first-row controls now lead the main toolbar.
+              // Keep the horizontal-rule control at the far right, before Undo.
+              _buildToolbarControl('horizontalRule'),
               _buildUndoButton(),
               _buildRedoButton(),
               _buildAddImageButton(),
