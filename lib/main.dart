@@ -2659,7 +2659,6 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
       iconButtonTheme: IconButtonThemeData(style: buttonStyle),
       popupMenuTheme: PopupMenuThemeData(
         color: toolbarBackground,
-        iconColor: Colors.black,
       ),
     );
     return Theme(
