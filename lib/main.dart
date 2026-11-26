@@ -2607,6 +2607,10 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
           showSearchButton: false,
           showSubscript: false,
           showSuperscript: false,
+          // Quill renders its own toolbar surface; set its background explicitly
+          // so it cannot cover the theme-colored surface behind this control.
+          color: Color(themeColor),
+          decoration: BoxDecoration(color: Color(themeColor)),
         ),
       ),
     );
