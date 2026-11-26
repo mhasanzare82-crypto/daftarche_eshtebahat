@@ -1966,6 +1966,14 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
   Note? _appendTarget;
   double editorLineSpacing = 1.0;
   double editorPageMargin = 14.0;
+  static const List<String> defaultToolbarOrder = [
+    'fontFamily', 'fontSize', 'color', 'backgroundColor', 'listNumbers',
+    'lineSpacing', 'pageMargin', 'undo', 'redo', 'alignRight',
+    'alignCenter', 'alignLeft', 'horizontalRule', 'theme', 'image', 'audio',
+  ];
+  List<String> _toolbarOrder = List<String>.of(defaultToolbarOrder);
+  bool _toolbarOrderLoaded = false;
+  String? _draggingToolbarTool;
   late int themeColor, themeTextColor;
   late String themeFontFamily;
   String? folderId;
@@ -2041,6 +2049,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
       selection: const TextSelection.collapsed(offset: 0),
     );
     _loadGlobalEditorSettings();
+    _loadToolbarOrder();
     if (widget.note == null) {
       controller.formatSelection(quill.Attribute.fromKeyValue('size', '20'));
     }
@@ -2509,6 +2518,192 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     await NotebookRepository().saveEditorPageMargin(selected);
   }
 
+  Future<void> _loadToolbarOrder() async {
+    final stored = await NotebookRepository().loadEditorToolbarOrder();
+    if (!mounted) return;
+    final valid = stored.where(defaultToolbarOrder.contains).toSet();
+    setState(() {
+      _toolbarOrder = [
+        ...stored.where(defaultToolbarOrder.contains),
+        ...defaultToolbarOrder.where((tool) => !valid.contains(tool)),
+      ];
+      _toolbarOrderLoaded = true;
+    });
+  }
+
+  Future<void> _moveToolbarTool(String draggedTool, String targetTool) async {
+    if (draggedTool == targetTool) return;
+    final next = List<String>.of(_toolbarOrder);
+    final from = next.indexOf(draggedTool);
+    final to = next.indexOf(targetTool);
+    if (from < 0 || to < 0) return;
+    next.removeAt(from);
+    next.insert(to, draggedTool);
+    setState(() => _toolbarOrder = next);
+    try {
+      await NotebookRepository().saveEditorToolbarOrder(next);
+    } catch (error) {
+      debugPrint('Editor toolbar order save failed: $error');
+    }
+  }
+
+  Widget _buildToolbarControl(String tool) {
+    final customOptions = <String, quill.QuillToolbarCustomButtonOptions>{
+      'lineSpacing': quill.QuillToolbarCustomButtonOptions(
+        icon: const Icon(Icons.format_line_spacing),
+        tooltip: 'فاصله بین خطوط',
+        onPressed: _showLineSpacingSettings,
+      ),
+      'pageMargin': quill.QuillToolbarCustomButtonOptions(
+        icon: const Icon(Icons.padding_outlined),
+        tooltip: 'فاصله از حاشیه صفحه',
+        onPressed: _showPageMarginSettings,
+      ),
+      'undo': quill.QuillToolbarCustomButtonOptions(
+        icon: const Icon(Icons.undo),
+        tooltip: 'واگرد',
+        onPressed: () => controller.undo(),
+      ),
+      'redo': quill.QuillToolbarCustomButtonOptions(
+        icon: const Icon(Icons.redo),
+        tooltip: 'انجام دوباره',
+        onPressed: () => controller.redo(),
+      ),
+      'alignRight': quill.QuillToolbarCustomButtonOptions(
+        icon: const Icon(Icons.format_align_right),
+        tooltip: 'راست‌چین',
+        onPressed: () => controller.formatSelection(quill.Attribute.fromKeyValue('align', 'right')),
+      ),
+      'alignCenter': quill.QuillToolbarCustomButtonOptions(
+        icon: const Icon(Icons.format_align_center),
+        tooltip: 'وسط‌چین',
+        onPressed: () => controller.formatSelection(quill.Attribute.fromKeyValue('align', 'center')),
+      ),
+      'alignLeft': quill.QuillToolbarCustomButtonOptions(
+        icon: const Icon(Icons.format_align_left),
+        tooltip: 'چپ‌چین',
+        onPressed: () => controller.formatSelection(quill.Attribute.fromKeyValue('align', 'left')),
+      ),
+      'horizontalRule': quill.QuillToolbarCustomButtonOptions(
+        icon: const Icon(Icons.horizontal_rule),
+        tooltip: 'درج خط افقی',
+        onPressed: insertHorizontalRule,
+      ),
+      'theme': quill.QuillToolbarCustomButtonOptions(
+        icon: const Icon(Icons.palette_outlined),
+        tooltip: 'انتخاب تم',
+        onPressed: selectEditorTheme,
+      ),
+      'image': quill.QuillToolbarCustomButtonOptions(
+        icon: const Icon(Icons.add_photo_alternate_outlined),
+        tooltip: 'افزودن تصویر',
+        onPressed: addImage,
+      ),
+      'audio': quill.QuillToolbarCustomButtonOptions(
+        icon: Icon(
+          isRecording ? Icons.stop_circle_outlined : Icons.mic_none,
+          color: isRecording ? Colors.red : null,
+        ),
+        tooltip: isRecording ? 'پایان ضبط ویس' : 'اضافه کردن ویس',
+        onPressed: toggleRecording,
+      ),
+    };
+
+    final custom = customOptions[tool];
+    return quill.QuillSimpleToolbar(
+      controller: controller,
+      config: quill.QuillSimpleToolbarConfig(
+        buttonOptions: quill.QuillSimpleToolbarButtonOptions(
+          fontFamily: quill.QuillToolbarFontFamilyButtonOptions(items: toolbarFontFamilies),
+          fontSize: quill.QuillToolbarFontSizeButtonOptions(
+            items: {for (var size = 6; size <= 42; size++) '$size': '$size'},
+          ),
+        ),
+        multiRowsDisplay: false,
+        embedButtons: const [],
+        customButtons: custom == null ? const [] : [custom],
+        showDividers: false,
+        showFontFamily: tool == 'fontFamily',
+        showFontSize: tool == 'fontSize',
+        showBoldButton: false,
+        showItalicButton: false,
+        showSmallButton: false,
+        showUnderLineButton: false,
+        showLineHeightButton: false,
+        showStrikeThrough: false,
+        showInlineCode: false,
+        showColorButton: tool == 'color',
+        showBackgroundColorButton: tool == 'backgroundColor',
+        showClearFormat: false,
+        showAlignmentButtons: false,
+        showLeftAlignment: false,
+        showCenterAlignment: false,
+        showRightAlignment: false,
+        showJustifyAlignment: false,
+        showHeaderStyle: false,
+        showListNumbers: tool == 'listNumbers',
+        showListBullets: false,
+        showListCheck: false,
+        showCodeBlock: false,
+        showQuote: false,
+        showIndent: false,
+        showLink: false,
+        showUndo: false,
+        showRedo: false,
+        showDirection: false,
+        showSearchButton: false,
+        showSubscript: false,
+        showSuperscript: false,
+      ),
+    );
+  }
+
+  Widget _buildDraggableToolbarTool(String tool) {
+    final child = _buildToolbarControl(tool);
+    return DragTarget<String>(
+      onWillAcceptWithDetails: (details) => details.data != tool,
+      onAcceptWithDetails: (details) => _moveToolbarTool(details.data, tool),
+      builder: (context, candidates, rejected) => LongPressDraggable<String>(
+        data: tool,
+        delay: const Duration(seconds: 3),
+        onDragStarted: () => setState(() => _draggingToolbarTool = tool),
+        onDragEnd: (_) => setState(() => _draggingToolbarTool = null),
+        feedback: Material(
+          color: Colors.transparent,
+          child: Opacity(opacity: 0.92, child: child),
+        ),
+        childWhenDragging: Opacity(opacity: 0.25, child: child),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          decoration: BoxDecoration(
+            color: candidates.isNotEmpty
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.14)
+                : (_draggingToolbarTool == tool
+                    ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.08)
+                    : Colors.transparent),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEditorToolbar() {
+    final tools = _toolbarOrderLoaded ? _toolbarOrder : defaultToolbarOrder;
+    return SizedBox(
+      height: 52,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        reverse: true,
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        itemCount: tools.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 2),
+        itemBuilder: (context, index) => _buildDraggableToolbarTool(tools[index]),
+      ),
+    );
+  }
+
   void _scheduleAutoSave() {
     _autoSaveTimer?.cancel();
     _autoSaveTimer = Timer(const Duration(milliseconds: 500), _persistDraft);
@@ -2634,112 +2829,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
                 ],
               ),
             ),
-          quill.QuillSimpleToolbar(
-            controller: controller,
-            config: quill.QuillSimpleToolbarConfig(
-              buttonOptions: quill.QuillSimpleToolbarButtonOptions(
-                fontFamily: quill.QuillToolbarFontFamilyButtonOptions(items: toolbarFontFamilies),
-                fontSize: quill.QuillToolbarFontSizeButtonOptions(items: {for (var size = 6; size <= 42; size++) '$size': '$size'}),
-              ),
-              multiRowsDisplay: false,
-              embedButtons: const [],
-              customButtons: [
-                quill.QuillToolbarCustomButtonOptions(
-                  icon: const Icon(Icons.format_line_spacing),
-                  tooltip: 'فاصله بین خطوط',
-                  onPressed: _showLineSpacingSettings,
-                ),
-                quill.QuillToolbarCustomButtonOptions(
-                  icon: const Icon(Icons.padding_outlined),
-                  tooltip: 'فاصله از حاشیه صفحه',
-                  onPressed: _showPageMarginSettings,
-                ),
-                quill.QuillToolbarCustomButtonOptions(
-                  icon: const Icon(Icons.undo),
-                  tooltip: 'واگرد',
-                  onPressed: () => controller.undo(),
-                ),
-                quill.QuillToolbarCustomButtonOptions(
-                  icon: const Icon(Icons.redo),
-                  tooltip: 'انجام دوباره',
-                  onPressed: () => controller.redo(),
-                ),
-                quill.QuillToolbarCustomButtonOptions(
-                  icon: const Icon(Icons.format_align_right),
-                  tooltip: 'راست‌چین',
-                  onPressed: () => controller.formatSelection(quill.Attribute.fromKeyValue('align', 'right')),
-                ),
-                quill.QuillToolbarCustomButtonOptions(
-                  icon: const Icon(Icons.format_align_center),
-                  tooltip: 'وسط‌چین',
-                  onPressed: () => controller.formatSelection(quill.Attribute.fromKeyValue('align', 'center')),
-                ),
-                quill.QuillToolbarCustomButtonOptions(
-                  icon: const Icon(Icons.format_align_left),
-                  tooltip: 'چپ‌چین',
-                  onPressed: () => controller.formatSelection(quill.Attribute.fromKeyValue('align', 'left')),
-                ),
-                quill.QuillToolbarCustomButtonOptions(
-                  icon: const Icon(Icons.horizontal_rule),
-                  tooltip: 'درج خط افقی',
-                  onPressed: insertHorizontalRule,
-                ),
-                quill.QuillToolbarCustomButtonOptions(
-                  icon: const Icon(Icons.palette_outlined),
-                  tooltip: 'انتخاب تم',
-                  onPressed: selectEditorTheme,
-                ),
-                quill.QuillToolbarCustomButtonOptions(
-                  icon: const Icon(Icons.add_photo_alternate_outlined),
-                  tooltip: 'افزودن تصویر',
-                  onPressed: addImage,
-                ),
-                quill.QuillToolbarCustomButtonOptions(
-                  icon: Icon(
-                    isRecording ? Icons.stop_circle_outlined : Icons.mic_none,
-                    color: isRecording ? Colors.red : null,
-                  ),
-                  tooltip: isRecording ? 'پایان ضبط ویس' : 'اضافه کردن ویس',
-                  onPressed: toggleRecording,
-                ),
-              ],
-              // Whitelist only the requested toolbar controls. Every other
-              // built-in Quill action is explicitly disabled so new/default
-              // package buttons cannot leak into the editor toolbar.
-              showDividers: false,
-              showFontFamily: true,
-              showFontSize: true,
-              showBoldButton: false,
-              showItalicButton: false,
-              showSmallButton: false,
-              showUnderLineButton: false,
-              showLineHeightButton: false,
-              showStrikeThrough: false,
-              showInlineCode: false,
-              showColorButton: true,
-              showBackgroundColorButton: true,
-              showClearFormat: false,
-              showAlignmentButtons: false,
-              showLeftAlignment: false,
-              showCenterAlignment: false,
-              showRightAlignment: false,
-              showJustifyAlignment: false,
-              showHeaderStyle: false,
-              showListNumbers: true,
-              showListBullets: false,
-              showListCheck: false,
-              showCodeBlock: false,
-              showQuote: false,
-              showIndent: false,
-              showLink: false,
-              showUndo: false,
-              showRedo: false,
-              showDirection: false,
-              showSearchButton: false,
-              showSubscript: false,
-              showSuperscript: false,
-            ),
-          ),
+          _buildEditorToolbar(),
         ]),
       ),
   );
