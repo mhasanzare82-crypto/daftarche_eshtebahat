@@ -2268,6 +2268,19 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     );
     searchController.dispose();
     if (selectedTitle != null && mounted) {
+      if (widget.note != null) {
+        // In edit mode, reuse the selected title as a rename only. Do not
+        // route the existing note through the new-note append workflow.
+        title.value = TextEditingValue(
+          text: selectedTitle,
+          selection: TextSelection.collapsed(offset: selectedTitle.length),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('عنوان یادداشت به «$selectedTitle» تغییر کرد.')),
+        );
+        return;
+      }
+
       final matchingNotes = widget.existingNotes
           .where((note) => note.title.trim() == selectedTitle.trim())
           .toList();
@@ -2527,7 +2540,7 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
               ),
               IconButton(
                 tooltip: 'انتخاب از عنوان‌های قبلی',
-                onPressed: widget.note != null || widget.previousTitles.isEmpty ? null : _choosePreviousTitle,
+                onPressed: widget.previousTitles.isEmpty ? null : _choosePreviousTitle,
                 icon: const Icon(Icons.add_circle_outline),
                 color: Color(themeTextColor),
               ),
