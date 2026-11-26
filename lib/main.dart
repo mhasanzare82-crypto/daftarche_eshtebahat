@@ -2717,23 +2717,26 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
         child: SizedBox(
           width: double.infinity,
           height: 48,
-          child: SingleChildScrollView(
+          child: ListView(
             scrollDirection: Axis.horizontal,
             reverse: true,
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Row(
-              children: [
-                // The former first-row controls now lead the main toolbar.
-                _buildUndoButton(),
-                _buildRedoButton(),
-                _buildAddImageButton(),
-                _buildLineSpacingButton(),
-                _buildFontSizeButton(),
-                _buildFontFamilyButton(),
-                for (final tool in defaultToolbarOrder)
-                  _buildToolbarControl(tool),
-              ],
+            primary: false,
+            physics: const ClampingScrollPhysics(
+              parent: AlwaysScrollableScrollPhysics(),
             ),
+            dragStartBehavior: DragStartBehavior.down,
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            children: [
+              // The former first-row controls now lead the main toolbar.
+              _buildUndoButton(),
+              _buildRedoButton(),
+              _buildAddImageButton(),
+              _buildLineSpacingButton(),
+              _buildFontSizeButton(),
+              _buildFontFamilyButton(),
+              for (final tool in defaultToolbarOrder)
+                _buildToolbarControl(tool),
+            ],
           ),
         ),
       ),
