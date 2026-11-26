@@ -16,6 +16,7 @@ class NotebookRepository {
   static const _textColorPaletteKey = 'notebook_text_color_palette';
   static const _appInterfaceFontKey = 'notebook_app_interface_font_family';
   static const _appThemeKey = 'notebook_app_theme';
+  static const _globalThemeAppliedKey = 'notebook_global_theme_applied';
   static const _quickWidgetNoteId = 'quick_note_widget_entries';
 
   Future<List<Note>> loadNotes() async {
@@ -94,6 +95,18 @@ class NotebookRepository {
     final prefs = await SharedPreferences.getInstance();
     if (!await prefs.setString(_appThemeKey, value)) {
       throw StateError('Unable to persist app theme');
+    }
+  }
+
+  Future<bool> loadGlobalThemeApplied() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_globalThemeAppliedKey) ?? false;
+  }
+
+  Future<void> saveGlobalThemeApplied(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!await prefs.setBool(_globalThemeAppliedKey, value)) {
+      throw StateError('Unable to persist global note theme setting');
     }
   }
 
