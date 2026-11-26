@@ -1517,7 +1517,24 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
     });
     return Directionality(textDirection:TextDirection.rtl,child:Scaffold(
       appBar:AppBar(title:_selectionMode ? Text('${_selectedNoteIds.length} یادداشت انتخاب‌شده',style:const TextStyle(fontWeight:FontWeight.bold)) : null,leading:_selectionMode?IconButton(tooltip:'لغو انتخاب',onPressed:_clearSelection,icon:const Icon(Icons.close)):null,actions:_selectionMode?[IconButton(tooltip:'انتخاب همه',onPressed:_selectAllVisibleNotes,icon:const Icon(Icons.select_all)),IconButton(tooltip:'تغییر تم گروهی',onPressed:_changeSelectedNotesTheme,icon:const Icon(Icons.palette_outlined)),IconButton(tooltip:'انتقال گروهی',onPressed:_moveSelectedNotes,icon:const Icon(Icons.drive_file_move_outline)),IconButton(tooltip:'خروجی گروهی DOCX',onPressed:_exportSelectedNotes,icon:const Icon(Icons.archive_outlined)),IconButton(tooltip:'حذف گروهی',onPressed:_deleteSelectedNotes,icon:const Icon(Icons.delete_outline,color:Colors.red))]:[PopupMenuButton<String>(tooltip:'گزینه‌های بیشتر',onSelected:(value){if(value=='theme_random')_applyThemeToAllNotes(randomize:true);if(value=='theme_choose')_applyThemeToAllNotes(randomize:false);if(value=='import')importDocx();if(value=='export')exportDocx(notes);if(value=='backup')createBackup();if(value=='restore')restoreBackup();if(value=='preview_full')_setFullCardPreview(true);if(value=='preview_summary')_setFullCardPreview(false);},itemBuilder:(context)=>const [PopupMenuItem(value:'preview_full',child:ListTile(leading:Icon(Icons.view_agenda_outlined),title:Text('نمایش کامل کارت'))),PopupMenuItem(value:'preview_summary',child:ListTile(leading:Icon(Icons.view_stream_outlined),title:Text('نمایش خلاصه کارت'))),PopupMenuDivider(),PopupMenuItem(value:'theme_random',child:ListTile(leading:Icon(Icons.shuffle_rounded),title:Text('تم تصادفی برای همه نوشته‌ها'))),PopupMenuItem(value:'theme_choose',child:ListTile(leading:Icon(Icons.palette_outlined),title:Text('انتخاب یک تم برای همه نوشته‌ها'))),PopupMenuDivider(),PopupMenuItem(value:'import',child:ListTile(leading:Icon(Icons.file_open),title:Text('ورود گروهی DOCX'))),PopupMenuItem(value:'export',child:ListTile(leading:Icon(Icons.file_download),title:Text('خروجی گروهی DOCX'))),PopupMenuDivider(),PopupMenuItem(value:'backup',child:ListTile(leading:Icon(Icons.backup_outlined),title:Text('ساخت فایل پشتیبان'))),PopupMenuItem(value:'restore',child:ListTile(leading:Icon(Icons.settings_backup_restore),title:Text('بازیابی فایل پشتیبان')))]),IconButton(tooltip:'مدیریت تم‌ها',onPressed:manageThemes,icon:const Icon(Icons.palette_outlined))]),
-      floatingActionButton:FloatingActionButton(onPressed:()=>edit(),tooltip:'یادداشت جدید',child:const Icon(Icons.add_rounded,size:32)),
+      floatingActionButton: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton(
+            heroTag: 'randomFeaturedNote',
+            onPressed: notes.isEmpty ? null : _refreshFeaturedNote,
+            tooltip: 'نمایش عنوان تصادفی بعدی',
+            child: const Icon(Icons.shuffle_rounded, size: 28),
+          ),
+          const SizedBox(width: 12),
+          FloatingActionButton(
+            heroTag: 'newNote',
+            onPressed: () => edit(),
+            tooltip: 'یادداشت جدید',
+            child: const Icon(Icons.add_rounded, size: 32),
+          ),
+        ],
+      ),
       body:SafeArea(child:Column(children:[
         if(!loading && featuredNote != null)
           Padding(
