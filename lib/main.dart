@@ -189,6 +189,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
   bool fullCardPreview = false;
   bool isSearchExpanded=false;
   final noteBackgroundColors=<String, int>{};
+  bool globalThemeApplied = false;
   static const defaultThemes=[NoteTheme('یاسی',0xFFEDE7F6),NoteTheme('آبی',0xFFE3F2FD),NoteTheme('سبز',0xFFE8F5E9),NoteTheme('صورتی',0xFFFCE4EC),NoteTheme('هلویی',0xFFFFEAD5)];
 
   @override
@@ -213,7 +214,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
           ..clear()
           ..addAll(latestNotes);
         featuredNote = _randomNote(latestNotes, excludeId: featuredNote?.id);
-        _randomizeNoteBackgrounds();
+        if (!globalThemeApplied) _randomizeNoteBackgrounds();
       });
     } catch (error, stackTrace) {
       debugPrint('Notebook refresh failed: $error\\n$stackTrace');
@@ -236,6 +237,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
   }
 
   int _backgroundColorFor(Note note) {
+    if (globalThemeApplied) return note.themeColor;
     final availableThemes = themes.where((theme) => randomThemeNames.contains(theme.name)).toList();
     final themePool = availableThemes.isNotEmpty
         ? availableThemes
@@ -278,6 +280,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       final loadedAppFontFamily = await repository.loadAppInterfaceFontFamily();
       final loadedAppTheme = await repository.loadAppTheme();
       final loadedFullCardPreview = await repository.loadFullCardPreview();
+      final loadedGlobalThemeApplied = await repository.loadGlobalThemeApplied();
       notes.addAll(loadedNotes);
       featuredNote = _randomNote(loadedNotes);
       themes.addAll(loadedThemes);
@@ -287,6 +290,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       pinnedNoteIds.addAll(loadedPinnedNoteIds);
       pinnedFolderIds.addAll(loadedPinnedFolderIds);
       fullCardPreview = loadedFullCardPreview;
+      globalThemeApplied = loadedGlobalThemeApplied;
       textColorPalette.addAll(loadedTextColorPalette);
       for (final entry in customFonts.entries) {
         try {
@@ -304,7 +308,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
       appThemeName.value = ['سفید', 'سیاه', 'دودی', 'نقره‌ای'].contains(loadedAppTheme) ? loadedAppTheme : 'دودی';
       if (themes.isEmpty) themes.addAll(defaultThemes);
       if (randomThemeNames.isEmpty) randomThemeNames.addAll(themes.map((theme) => theme.name));
-      _randomizeNoteBackgrounds();
+      if (!globalThemeApplied) _randomizeNoteBackgrounds();
       if (mounted) setState(() => loading = false);
       await persistThemes();
     } catch (error, stackTrace) {
@@ -830,6 +834,7 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
     }
 
     final random = Random();
+    globalThemeApplied = !randomize;
     setState(() {
       for (var i = 0; i < notes.length; i++) {
         final note = notes[i];
@@ -848,10 +853,11 @@ class _NotesPageState extends State<NotesPage> with WidgetsBindingObserver {
           note.folderId,
           List<String>.of(note.audios),
         );
-        noteBackgroundColors.remove(note.id);
+        noteBackgroundColors[note.id] = theme.backgroundColor;
         if (featuredNote?.id == note.id) featuredNote = notes[i];
       }
     });
+    await repository.saveGlobalThemeApplied(globalThemeApplied);
     await persist();
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
