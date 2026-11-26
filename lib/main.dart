@@ -1967,9 +1967,8 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
   double editorLineSpacing = 1.0;
   double editorPageMargin = 14.0;
   static const List<String> defaultToolbarOrder = [
-    'fontFamily', 'fontSize', 'color', 'backgroundColor', 'listNumbers',
-    'lineSpacing', 'pageMargin', 'undo', 'redo', 'alignRight',
-    'alignCenter', 'alignLeft', 'horizontalRule', 'theme', 'image', 'audio',
+    'color', 'backgroundColor', 'listNumbers', 'pageMargin', 'alignRight',
+    'alignCenter', 'alignLeft', 'horizontalRule', 'theme', 'audio',
   ];
   List<String> _toolbarOrder = List<String>.of(defaultToolbarOrder);
   bool _toolbarOrderLoaded = false;
@@ -2550,60 +2549,40 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
 
   Widget _buildToolbarControl(String tool) {
     final customOptions = <String, quill.QuillToolbarCustomButtonOptions>{
-      'lineSpacing': quill.QuillToolbarCustomButtonOptions(
-        icon: const Icon(Icons.format_line_spacing),
-        tooltip: 'فاصله بین خطوط',
-        onPressed: _showLineSpacingSettings,
-      ),
       'pageMargin': quill.QuillToolbarCustomButtonOptions(
-        icon: const Icon(Icons.padding_outlined),
+        icon: const Icon(Icons.padding_outlined, color: Colors.black),
         tooltip: 'فاصله از حاشیه صفحه',
         onPressed: _showPageMarginSettings,
       ),
-      'undo': quill.QuillToolbarCustomButtonOptions(
-        icon: const Icon(Icons.undo),
-        tooltip: 'واگرد',
-        onPressed: () => controller.undo(),
-      ),
-      'redo': quill.QuillToolbarCustomButtonOptions(
-        icon: const Icon(Icons.redo),
-        tooltip: 'انجام دوباره',
-        onPressed: () => controller.redo(),
-      ),
       'alignRight': quill.QuillToolbarCustomButtonOptions(
-        icon: const Icon(Icons.format_align_right),
+        icon: const Icon(Icons.format_align_right, color: Colors.black),
         tooltip: 'راست‌چین',
         onPressed: () => controller.formatSelection(quill.Attribute.fromKeyValue('align', 'right')),
       ),
       'alignCenter': quill.QuillToolbarCustomButtonOptions(
-        icon: const Icon(Icons.format_align_center),
+        icon: const Icon(Icons.format_align_center, color: Colors.black),
         tooltip: 'وسط‌چین',
         onPressed: () => controller.formatSelection(quill.Attribute.fromKeyValue('align', 'center')),
       ),
       'alignLeft': quill.QuillToolbarCustomButtonOptions(
-        icon: const Icon(Icons.format_align_left),
+        icon: const Icon(Icons.format_align_left, color: Colors.black),
         tooltip: 'چپ‌چین',
         onPressed: () => controller.formatSelection(quill.Attribute.fromKeyValue('align', 'left')),
       ),
       'horizontalRule': quill.QuillToolbarCustomButtonOptions(
-        icon: const Icon(Icons.horizontal_rule),
+        icon: const Icon(Icons.horizontal_rule, color: Colors.black),
         tooltip: 'درج خط افقی',
         onPressed: insertHorizontalRule,
       ),
       'theme': quill.QuillToolbarCustomButtonOptions(
-        icon: const Icon(Icons.palette_outlined),
+        icon: const Icon(Icons.palette_outlined, color: Colors.black),
         tooltip: 'انتخاب تم',
         onPressed: selectEditorTheme,
-      ),
-      'image': quill.QuillToolbarCustomButtonOptions(
-        icon: const Icon(Icons.add_photo_alternate_outlined),
-        tooltip: 'افزودن تصویر',
-        onPressed: addImage,
       ),
       'audio': quill.QuillToolbarCustomButtonOptions(
         icon: Icon(
           isRecording ? Icons.stop_circle_outlined : Icons.mic_none,
-          color: isRecording ? Colors.red : null,
+          color: Colors.black,
         ),
         tooltip: isRecording ? 'پایان ضبط ویس' : 'اضافه کردن ویس',
         onPressed: toggleRecording,
@@ -2611,62 +2590,97 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     };
 
     final custom = customOptions[tool];
-    final controlWidth = switch (tool) {
-      'fontFamily' => 176.0,
-      'fontSize' => 92.0,
-      _ => 48.0,
-    };
     return SizedBox(
-      width: controlWidth,
-      height: 52,
+      width: 48,
+      height: 48,
       child: Center(
-        child: quill.QuillSimpleToolbar(
-      controller: controller,
-      config: quill.QuillSimpleToolbarConfig(
-        buttonOptions: quill.QuillSimpleToolbarButtonOptions(
-          fontFamily: quill.QuillToolbarFontFamilyButtonOptions(items: toolbarFontFamilies),
-          fontSize: quill.QuillToolbarFontSizeButtonOptions(
-            items: {for (var size = 6; size <= 42; size++) '$size': '$size'},
+        child: IconTheme.merge(
+          data: const IconThemeData(color: Colors.black),
+          child: quill.QuillSimpleToolbar(
+            controller: controller,
+            config: quill.QuillSimpleToolbarConfig(
+              multiRowsDisplay: false,
+              embedButtons: const [],
+              customButtons: custom == null ? const [] : [custom],
+              showDividers: false,
+              showFontFamily: false,
+              showFontSize: false,
+              showBoldButton: false,
+              showItalicButton: false,
+              showSmallButton: false,
+              showUnderLineButton: false,
+              showLineHeightButton: false,
+              showStrikeThrough: false,
+              showInlineCode: false,
+              showColorButton: tool == 'color',
+              showBackgroundColorButton: tool == 'backgroundColor',
+              showClearFormat: false,
+              showAlignmentButtons: false,
+              showLeftAlignment: false,
+              showCenterAlignment: false,
+              showRightAlignment: false,
+              showJustifyAlignment: false,
+              showHeaderStyle: false,
+              showListNumbers: tool == 'listNumbers',
+              showListBullets: false,
+              showListCheck: false,
+              showCodeBlock: false,
+              showQuote: false,
+              showIndent: false,
+              showLink: false,
+              showUndo: false,
+              showRedo: false,
+              showDirection: false,
+              showSearchButton: false,
+              showSubscript: false,
+              showSuperscript: false,
+            ),
           ),
         ),
-        multiRowsDisplay: false,
-        embedButtons: const [],
-        customButtons: custom == null ? const [] : [custom],
-        showDividers: false,
-        showFontFamily: tool == 'fontFamily',
-        showFontSize: tool == 'fontSize',
-        showBoldButton: false,
-        showItalicButton: false,
-        showSmallButton: false,
-        showUnderLineButton: false,
-        showLineHeightButton: false,
-        showStrikeThrough: false,
-        showInlineCode: false,
-        showColorButton: tool == 'color',
-        showBackgroundColorButton: tool == 'backgroundColor',
-        showClearFormat: false,
-        showAlignmentButtons: false,
-        showLeftAlignment: false,
-        showCenterAlignment: false,
-        showRightAlignment: false,
-        showJustifyAlignment: false,
-        showHeaderStyle: false,
-        showListNumbers: tool == 'listNumbers',
-        showListBullets: false,
-        showListCheck: false,
-        showCodeBlock: false,
-        showQuote: false,
-        showIndent: false,
-        showLink: false,
-        showUndo: false,
-        showRedo: false,
-        showDirection: false,
-        showSearchButton: false,
-        showSubscript: false,
-        showSuperscript: false,
-        ),
-        ),
       ),
+    );
+  }
+
+  Widget _buildFontSizeButton() {
+    return PopupMenuButton<String>(
+      tooltip: 'اندازه فونت',
+      icon: const Icon(Icons.format_size, color: Colors.black),
+      onSelected: (size) {
+        controller.formatSelection(quill.Attribute.fromKeyValue('size', size));
+      },
+      itemBuilder: (context) => [
+        for (var size = 6; size <= 42; size++)
+          PopupMenuItem<String>(
+            value: '$size',
+            child: Text('$size'),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildFontFamilyButton() {
+    final families = toolbarFontFamilies.entries.toList();
+    return PopupMenuButton<String>(
+      tooltip: 'نوع فونت',
+      icon: const Icon(Icons.font_download_outlined, color: Colors.black),
+      onSelected: (family) {
+        controller.formatSelection(quill.Attribute.fromKeyValue('font', family));
+      },
+      itemBuilder: (context) => [
+        for (final family in families)
+          PopupMenuItem<String>(
+            value: family.value,
+            child: Text(family.key),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildLineSpacingButton() {
+    return IconButton(
+      tooltip: 'ارتفاع خطوط',
+      onPressed: _showLineSpacingSettings,
+      icon: const Icon(Icons.format_line_spacing, color: Colors.black),
     );
   }
 
@@ -2706,15 +2720,52 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
 
   Widget _buildEditorToolbar() {
     final tools = _toolbarOrderLoaded ? _toolbarOrder : defaultToolbarOrder;
-    return SizedBox(
-      height: 52,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        reverse: true,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        itemCount: tools.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 2),
-        itemBuilder: (context, index) => _buildDraggableToolbarTool(tools[index]),
+    return Container(
+      width: double.infinity,
+      color: Color(themeColor),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            height: 48,
+            child: Row(
+              children: [
+                IconButton(
+                  tooltip: 'واگرد',
+                  onPressed: () => controller.undo(),
+                  icon: const Icon(Icons.undo, color: Colors.black),
+                ),
+                IconButton(
+                  tooltip: 'انجام دوباره',
+                  onPressed: () => controller.redo(),
+                  icon: const Icon(Icons.redo, color: Colors.black),
+                ),
+                IconButton(
+                  tooltip: 'افزودن تصویر',
+                  onPressed: addImage,
+                  icon: const Icon(Icons.add_photo_alternate_outlined, color: Colors.black),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1, thickness: 1, color: Colors.black26),
+          SizedBox(
+            height: 48,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              reverse: true,
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Row(
+                children: [
+                  _buildLineSpacingButton(),
+                  _buildFontSizeButton(),
+                  _buildFontFamilyButton(),
+                  for (final tool in tools) _buildDraggableToolbarTool(tool),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
