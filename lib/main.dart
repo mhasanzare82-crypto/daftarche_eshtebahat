@@ -2535,9 +2535,10 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     if (draggedTool == targetTool) return;
     final next = List<String>.of(_toolbarOrder);
     final from = next.indexOf(draggedTool);
-    final to = next.indexOf(targetTool);
+    var to = next.indexOf(targetTool);
     if (from < 0 || to < 0) return;
     next.removeAt(from);
+    if (from < to) to--;
     next.insert(to, draggedTool);
     setState(() => _toolbarOrder = next);
     try {
@@ -2670,9 +2671,12 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
         onDragEnd: (_) => setState(() => _draggingToolbarTool = null),
         feedback: Material(
           color: Colors.transparent,
-          child: Opacity(opacity: 0.92, child: child),
+          child: Opacity(opacity: 0.92, child: _buildToolbarControl(tool)),
         ),
-        childWhenDragging: Opacity(opacity: 0.25, child: child),
+        childWhenDragging: Opacity(
+          opacity: 0.25,
+          child: _buildToolbarControl(tool),
+        ),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           decoration: BoxDecoration(
