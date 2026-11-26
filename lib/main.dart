@@ -2513,6 +2513,22 @@ class _EditorPageState extends State<EditorPage> with WidgetsBindingObserver {
     await NotebookRepository().saveEditorPageMargin(selected);
   }
 
+  Widget _toolbarButtonSurface(Widget child) {
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: Material(
+        color: Color(themeColor),
+        child: Center(
+          child: IconTheme.merge(
+            data: const IconThemeData(color: Colors.black),
+            child: child,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildToolbarControl(String tool) {
     final customOptions = <String, quill.QuillToolbarCustomButtonOptions>{
       'pageMargin': quill.QuillToolbarCustomButtonOptions(
